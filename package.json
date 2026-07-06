@@ -1,0 +1,45 @@
+{
+  "name": "sticky-note",
+  "version": "1.0.0",
+  "description": "桌面便签 - 待办 + 随心记",
+  "main": "src/main/index.js",
+  "scripts": {
+    "dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "build": "vite build && electron-builder",
+    "vite": "vite"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "concurrently": "^8.0.0",
+    "cross-env": "^10.1.0",
+    "electron": "^29.4.6",
+    "electron-builder": "^24.0.0",
+    "electron-vite": "^5.0.0",
+    "vite": "^5.0.0",
+    "vite-plugin-electron": "^0.28.0",
+    "vite-plugin-electron-renderer": "^0.14.0",
+    "wait-on": "^7.2.0"
+  },
+  "dependencies": {
+    "@tiptap/extension-image": "^2.0.0",
+    "@tiptap/extension-link": "^2.0.0",
+    "@tiptap/starter-kit": "^2.0.0",
+    "@tiptap/vue-3": "^2.0.0",
+    "docx": "^8.0.0",
+    "node-cron": "^3.0.0",
+    "pinia": "^2.0.0",
+    "sql.js": "^1.12.0",
+    "vue": "^3.4.0",
+    "vue-router": "^4.6.4"
+  },
+  "build": {
+    "appId": "com.wenya.sticky-note",
+    "productName": "随心记",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
