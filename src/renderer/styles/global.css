@@ -74,6 +74,8 @@ html, body, #app {
 .tray-btn { background: #ffbd44; }
 .ball-btn { background: #9b8ec4; color: white; }
 .close-btn { background: #ff6059; }
+.pin-btn  { background: rgba(155, 142, 196, 0.25); color: var(--text-muted); font-size: 12px; }
+.pin-btn.pinned { background: #4facf7; color: white; }
 
 /* ─── 内容区 ─────────────────────────────────────────── */
 
@@ -84,8 +86,45 @@ html, body, #app {
   padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
 }
+
+.panel {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 拖拽分隔线 */
+.split-handle {
+  flex-shrink: 0;
+  height: 8px;
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.split-handle:hover { background: rgba(155, 142, 196, 0.2); }
+.split-dots {
+  display: block;
+  width: 28px;
+  height: 3px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--purple-light) 0, var(--purple-light) 3px,
+    transparent 3px, transparent 7px
+  );
+  border-radius: 2px;
+  opacity: 0.5;
+}
+.split-handle:hover .split-dots { opacity: 1; }
+
+/* 拖拽时禁止选中文字、全局 ns-resize 光标 */
+.is-resizing,
+.is-resizing * { cursor: ns-resize !important; user-select: none !important; }
 
 .content::-webkit-scrollbar { width: 4px; }
 .content::-webkit-scrollbar-thumb { background: var(--purple-light); border-radius: 2px; }
@@ -180,6 +219,9 @@ html, body, #app {
   background: var(--bg-section);
   border-radius: 8px;
   padding: 10px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .todo-list {
@@ -350,6 +392,47 @@ html, body, #app {
 .note-editor :deep(.ProseMirror a) {
   color: var(--purple);
   text-decoration: underline;
+}
+
+/* ─── 富文本格式 ─────────────────────────────────────────── */
+
+.note-editor .ProseMirror ul {
+  padding-left: 18px;
+  list-style-type: disc;
+}
+
+.note-editor .ProseMirror ol {
+  padding-left: 18px;
+  list-style-type: decimal;
+}
+
+.note-editor .ProseMirror li {
+  margin: 2px 0;
+  line-height: 1.6;
+}
+
+.note-editor .ProseMirror mark {
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* ─── 随心记标题行（含工具栏） ───────────────────────────── */
+
+.note-section .section-header {
+  gap: 4px;
+  flex-wrap: nowrap;
+  overflow: visible;
+}
+
+.note-section .section-title {
+  font-size: 13px;
+  font-weight: bold;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.note-section .archive-btn {
+  flex-shrink: 0;
 }
 
 /* ─── 日历弹窗 ───────────────────────────────────────── */

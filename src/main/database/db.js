@@ -30,7 +30,16 @@ function persist() {
  * 初始化数据库，创建表
  */
 async function initDatabase() {
-  SQL = await initSqlJs()
+  SQL = await initSqlJs({
+    locateFile: (file) => {
+      if (app.isPackaged) {
+        // 打包后 wasm 在 asar.unpacked 中
+        return path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'sql.js', 'dist', file)
+      }
+      // 开发模式
+      return path.join(__dirname, '../../../node_modules/sql.js/dist', file)
+    },
+  })
 
   const dbPath = getDbPath()
   if (fs.existsSync(dbPath)) {

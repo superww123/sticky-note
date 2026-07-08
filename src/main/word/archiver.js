@@ -1,10 +1,37 @@
 const { Document, Packer, Paragraph, TextRun, ImageRun, HeadingLevel } = require('docx')
+const { dialog, BrowserWindow } = require('electron')
 const fs = require('fs')
 const path = require('path')
 const { getDailyNote } = require('../database/db')
+const { getArchiveDir: getConfiguredDir, setArchiveDir } = require('../config')
 
-const ARCHIVE_DIR = 'D:\\wenya\\随心记'
-const ARCHIVE_FILE = path.join(ARCHIVE_DIR, '随心记归档.docx')
+async function resolveArchiveDir() {
+  const saved = getConfiguredDir()
+  if (saved) return saved
+
+  // 首次使用：弹出文件夹选择框
+  const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0] || null
+  const result = await dialog.showOpenDialog(win, {
+    title: '选择随心记归档文件夹',
+    message: '请选择保存随心记归档文档的文件夹',
+    properties: ['openDirectory', 'createDirectory'],
+    buttonLabel: '选择此文件夹',
+  })
+  if (result.canceled || !result.filePaths[0]) {
+    throw new Error('未选择归档文件夹，归档已取消')
+  }
+  const dir = result.filePaths[0]
+  setArchiveDir(dir)
+  return dir
+}
+
+function getArchiveFile(archiveDir) {
+  return path.join(archiveDir, '随心记归档.docx')
+}
+
+function getHistoryFile(archiveDir) {
+  return path.join(archiveDir, '.archive-history.json')
+}
 
 /**
  * 将指定日期的随心记归档到 Word 文档
@@ -16,66 +43,33 @@ async function archiveDailyNote(date) {
     return
   }
 
-  // 确保目录存在
-  fs.mkdirSync(ARCHIVE_DIR, { recursive: true })
+  const archiveDir = await resolveArchiveDir()
+  fs.mkdirSync(archiveDir, { recursive: true })
 
-  // 解析 Tiptap JSON 为 docx 段落
   const paragraphs = await tiptapToDocxParagraphs(date, data.noteContent)
-
-  // 读取已有文档或新建
-  const newSections = [
-    new Paragraph({
-      text: `${date} 随心记`,
-      heading: HeadingLevel.HEADING_2,
-      spacing: { before: 400, after: 200 },
-    }),
-    ...paragraphs,
-    new Paragraph({ text: '', spacing: { after: 400 } }), // 空行分隔
-  ]
-
   let existingChildren = []
-  if (fs.existsSync(ARCHIVE_FILE)) {
-    // 已有文件：追加内容（重新生成，保留历史）
-    // 注意：docx 库不支持直接修改已有文件，采用追加存储策略：
-    // 将历史内容记录在单独的 JSON 中，每次重新生成完整 docx
-    existingChildren = loadArchivedHistory()
+  if (fs.existsSync(getArchiveFile(archiveDir))) {
+    existingChildren = loadArchivedHistory(archiveDir)
   }
 
-  // 保存本次归档到历史记录
   const historyEntry = { date, content: data.noteContent }
-  saveArchivedHistory(historyEntry, existingChildren)
-
-  // 重新生成完整 docx
-  await generateDocx(existingChildren.concat([historyEntry]))
-  console.log(`[Archiver] ${date} 随心记归档完成`)
+  saveArchivedHistory(historyEntry, existingChildren, archiveDir)
+  await generateDocx(existingChildren.concat([historyEntry]), archiveDir)
+  console.log(`[Archiver] ${date} 随心记归档完成 → ${archiveDir}`)
 }
 
-/**
- * 从历史记录文件加载已归档内容
- */
-function loadArchivedHistory() {
-  const historyFile = path.join(ARCHIVE_DIR, '.archive-history.json')
+function loadArchivedHistory(archiveDir) {
+  const historyFile = getHistoryFile(archiveDir)
   if (!fs.existsSync(historyFile)) return []
-  try {
-    return JSON.parse(fs.readFileSync(historyFile, 'utf-8'))
-  } catch {
-    return []
-  }
+  try { return JSON.parse(fs.readFileSync(historyFile, 'utf-8')) } catch { return [] }
 }
 
-/**
- * 保存归档历史记录
- */
-function saveArchivedHistory(newEntry, existing) {
-  const historyFile = path.join(ARCHIVE_DIR, '.archive-history.json')
-  const all = [...existing, newEntry]
-  fs.writeFileSync(historyFile, JSON.stringify(all, null, 2), 'utf-8')
+function saveArchivedHistory(newEntry, existing, archiveDir) {
+  const historyFile = getHistoryFile(archiveDir)
+  fs.writeFileSync(historyFile, JSON.stringify([...existing, newEntry], null, 2), 'utf-8')
 }
 
-/**
- * 生成完整 docx 文件
- */
-async function generateDocx(historyEntries) {
+async function generateDocx(historyEntries, archiveDir) {
   const allSections = []
 
   for (const entry of historyEntries) {
@@ -95,30 +89,23 @@ async function generateDocx(historyEntries) {
     sections: [{
       properties: {},
       children: [
-        new Paragraph({
-          text: '随心记归档',
-          heading: HeadingLevel.HEADING_1,
-        }),
+        new Paragraph({ text: '随心记归档', heading: HeadingLevel.HEADING_1 }),
         ...allSections,
       ],
     }],
   })
 
   const buffer = await Packer.toBuffer(doc)
-  fs.writeFileSync(ARCHIVE_FILE, buffer)
+  fs.writeFileSync(getArchiveFile(archiveDir), buffer)
 }
 
-/**
- * 将 Tiptap JSON 转换为 docx Paragraph 数组
- */
 async function tiptapToDocxParagraphs(date, tiptapJson) {
   const paragraphs = []
   if (!tiptapJson || !tiptapJson.content) return paragraphs
 
   for (const node of tiptapJson.content) {
     if (node.type === 'paragraph') {
-      const runs = nodeToTextRuns(node)
-      paragraphs.push(new Paragraph({ children: runs }))
+      paragraphs.push(new Paragraph({ children: nodeToTextRuns(node) }))
     } else if (node.type === 'image') {
       try {
         const imgParagraph = await imageNodeToDocx(node)
@@ -138,9 +125,6 @@ async function tiptapToDocxParagraphs(date, tiptapJson) {
   return paragraphs
 }
 
-/**
- * 从节点提取 TextRun 数组
- */
 function nodeToTextRuns(node) {
   const runs = []
   if (!node.content) return [new TextRun({ text: '' })]
@@ -156,18 +140,13 @@ function nodeToTextRuns(node) {
   return runs.length ? runs : [new TextRun({ text: '' })]
 }
 
-/**
- * 将图片节点转换为 docx ImageRun
- */
 async function imageNodeToDocx(node) {
   const src = node.attrs?.src
   if (!src) return null
 
   let imageData
   if (src.startsWith('data:')) {
-    // Base64 图片
-    const base64 = src.split(',')[1]
-    imageData = Buffer.from(base64, 'base64')
+    imageData = Buffer.from(src.split(',')[1], 'base64')
   } else if (src.startsWith('file://')) {
     imageData = fs.readFileSync(src.replace('file://', ''))
   } else {
@@ -176,10 +155,7 @@ async function imageNodeToDocx(node) {
 
   return new Paragraph({
     children: [
-      new ImageRun({
-        data: imageData,
-        transformation: { width: 400, height: 300 },
-      }),
+      new ImageRun({ data: imageData, transformation: { width: 400, height: 300 } }),
     ],
   })
 }

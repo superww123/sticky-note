@@ -15,15 +15,27 @@ function setupScheduler(mainWindow) {
   migrateOnStartup()
 
   // 每天 18:00 归档随心记
-  cron.schedule('0 18 * * *', () => {
+  cron.schedule('0 18 * * *', async () => {
     const today = getTodayStr()
     console.log('[Scheduler] 开始归档随心记:', today)
-    archiveDailyNote(today)
+    try {
+      await archiveDailyNote(today)
+      console.log('[Scheduler] 归档成功:', today)
+      new Notification({
+        title: '📝 随心记已归档',
+        body: `${today} 的随心记已保存到文档`,
+      }).show()
+    } catch (e) {
+      console.error('[Scheduler] 归档失败:', e.message)
+    }
   })
 
-  // 每天 00:01 迁移未完成待办到今天
+  // 每天 00:01 迁移未完成待办到今天，并通知渲染层刷新
   cron.schedule('1 0 * * *', () => {
     migratePendingTodos()
+    if (schedulerWindow && !schedulerWindow.isDestroyed()) {
+      schedulerWindow.webContents.send('day-changed')
+    }
   })
 
   // 每分钟检查一次截止时间提醒
@@ -171,4 +183,4 @@ function getDateStr(offsetDays) {
   return `${y}-${m}-${day}`
 }
 
-module.exports = { setupScheduler }
+module.exports = { setupScheduler, migrateOnStartup }

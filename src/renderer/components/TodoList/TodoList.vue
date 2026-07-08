@@ -52,6 +52,7 @@
 
 <script setup>
 import { ref, reactive, nextTick, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useDailyStore } from '../../stores/dailyStore'
 import TodoItem from './TodoItem.vue'
 import MigrateMenu from './MigrateMenu.vue'
@@ -154,5 +155,10 @@ async function updateText(id, text) {
   await store.saveTodos(updated)
 }
 
-onMounted(() => store.loadToday())
+const route = useRoute()
+
+onMounted(() => {
+  const dateParam = route.params?.date
+  dateParam ? store.loadDate(dateParam) : store.loadToday()
+})
 </script>

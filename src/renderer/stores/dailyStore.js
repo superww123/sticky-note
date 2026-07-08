@@ -50,9 +50,10 @@ export const useDailyStore = defineStore('daily', () => {
   }
 
   /**
-   * 加载今天的数据
+   * 加载今天的数据（先触发一次迁移，确保昨天未完成的待办已补入）
    */
   async function loadToday() {
+    await window.electronAPI?.migrateNow?.()
     await loadDate(getTodayStr())
   }
 

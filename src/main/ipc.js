@@ -1,4 +1,5 @@
-const { ipcMain } = require('electron')
+const { ipcMain, clipboard, nativeImage, BrowserWindow } = require('electron')
+const state = require('./state')
 const {
   getDailyNote,
   saveTodos,
@@ -8,6 +9,12 @@ const {
   deleteCalendarMark,
 } = require('./database/db')
 const { archiveDailyNote } = require('./word/archiver')
+const { migrateOnStartup } = require('./scheduler')
+const { createNoteWindow } = require('./windows/windowManager')
+const { openImagePreviewWindow } = require('./windows/imagePreviewWindow')
+
+const THEME_COUNT = 5  // 与 renderer/themes.js 保持一致
+let noteColorIdx = 0   // 循环计数器
 
 /**
  * 注册所有 IPC 通信处理器
@@ -23,7 +30,6 @@ function setupIpc(mainWindow, ballWindow) {
   ipcMain.on('window:restore-from-ball', () => {
     ballWindow.hide()
     mainWindow.show()
-    mainWindow.setAlwaysOnTop(true, 'floating')
     mainWindow.focus()
   })
 
@@ -41,6 +47,17 @@ function setupIpc(mainWindow, ballWindow) {
     const { app } = require('electron')
     app.isQuiting = true
     app.quit()
+  })
+
+  ipcMain.on('window:close-self', (event) => {
+    const { BrowserWindow } = require('electron')
+    const sender = BrowserWindow.fromWebContents(event.sender)
+    if (sender && !sender.isDestroyed()) sender.close()
+  })
+
+  ipcMain.on('window:open-note', (event, date) => {
+    noteColorIdx = (noteColorIdx % THEME_COUNT) + 1  // 1~5 循环
+    createNoteWindow(date, noteColorIdx)
   })
 
   ipcMain.handle('window:get-pos', () => {
@@ -133,8 +150,71 @@ function setupIpc(mainWindow, ballWindow) {
   // ─── 手动归档 ───────────────────────────────────────────
 
   ipcMain.handle('archive:manual', async (event, date) => {
-    await archiveDailyNote(date)
-    return { ok: true }
+    try {
+      await archiveDailyNote(date)
+      return { ok: true }
+    } catch (e) {
+      console.error('[IPC] 归档失败:', e.message)
+      throw new Error(e.message || '归档失败')
+    }
+  })
+
+  // ─── 待办迁移 ───────────────────────────────────────────
+
+  ipcMain.handle('migrate:now', () => {
+    try {
+      migrateOnStartup()
+      return { ok: true }
+    } catch (e) {
+      console.error('[IPC] 迁移失败:', e.message)
+      return { ok: false }
+    }
+  })
+
+  // ─── 图钉置顶 ─────────────────────────────────────────
+
+  ipcMain.handle('window:toggle-pin', () => {
+    state.isPinned = !state.isPinned
+    if (state.isPinned) {
+      mainWindow.setAlwaysOnTop(true, 'floating')
+    } else {
+      mainWindow.setAlwaysOnTop(false)
+    }
+    return state.isPinned
+  })
+
+  ipcMain.handle('window:get-pin', () => state.isPinned)
+
+  // ─── 图片全屏预览 ─────────────────────────────────────
+
+  ipcMain.on('image:preview-fullscreen', (event, src) => {
+    openImagePreviewWindow(src)
+  })
+
+  ipcMain.on('preview:close', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win && !win.isDestroyed()) win.close()
+  })
+
+  // ─── 剪贴板 ───────────────────────────────────────────
+
+  ipcMain.handle('clipboard:write-image', (event, src) => {
+    try {
+      let img
+      if (src.startsWith('data:')) {
+        const base64 = src.split(',')[1]
+        const buffer = Buffer.from(base64, 'base64')
+        img = nativeImage.createFromBuffer(buffer)
+      } else {
+        const filePath = decodeURIComponent(src.replace(/^file:\/\/\/?/, ''))
+        img = nativeImage.createFromPath(filePath)
+      }
+      clipboard.writeImage(img)
+      return { ok: true }
+    } catch (e) {
+      console.error('[IPC] 复制图片失败:', e.message)
+      throw new Error(e.message || '复制图片失败')
+    }
   })
 
   console.log('[IPC] 通信处理器已注册')

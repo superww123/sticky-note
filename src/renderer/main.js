@@ -9,6 +9,7 @@ import './styles/global.css'
 const routes = [
   { path: '/', component: App },
   { path: '/ball', component: BallApp },
+  { path: '/note/:date/:colorIdx?', component: App },
 ]
 
 const router = createRouter({

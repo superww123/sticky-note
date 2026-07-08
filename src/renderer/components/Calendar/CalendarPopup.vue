@@ -136,7 +136,7 @@ function openInMain() {
 }
 
 function openInNew() {
-  // TODO: 通知主进程打开新窗口显示该日期
+  window.electronAPI?.openNoteWindow(selectedDate.value)
   showOpenDialog.value = false
   emit('close')
 }

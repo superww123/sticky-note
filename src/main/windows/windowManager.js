@@ -9,6 +9,9 @@ const isDev = process.env.NODE_ENV === 'development'
 // 开发时渲染层地址
 const RENDERER_URL = process.env['ELECTRON_RENDERER_URL'] || 'http://localhost:5173'
 
+// 应用图标（ICO 文件，用于窗口标题栏 / 任务栏 / dock）
+const APP_ICON = path.join(__dirname, '../../../assets/icon.ico')
+
 /**
  * 创建主便签窗口
  */
@@ -20,10 +23,10 @@ function createMainWindow() {
     minHeight: 400,
     frame: false,
     transparent: true,
-    alwaysOnTop: true,
     resizable: true,
     maximizable: false,
     skipTaskbar: false,
+    icon: APP_ICON,
     webPreferences: {
       preload: path.join(__dirname, '../../preload/index.js'),
       contextIsolation: true,
@@ -31,39 +34,16 @@ function createMainWindow() {
     },
   })
 
-  win.setAlwaysOnTop(true, 'floating')
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-
-  // 获得焦点时关闭置顶，让搜狗等输入法候选框能正常显示在窗口上方
-  win.on('focus', () => {
-    if (!win.isDestroyed()) win.setAlwaysOnTop(false)
-  })
-  // 失去焦点时恢复置顶，保持便签在其他窗口上方可见
-  win.on('blur', () => {
-    if (!win.isDestroyed() && !win.isMinimized() && win.isVisible()) {
-      win.setAlwaysOnTop(true, 'floating')
-    }
-  })
 
   // 拖动期间拦截所有 OS 发起的 resize
   win.on('will-resize', (e) => {
     if (win._isDragging) e.preventDefault()
   })
 
-  // 心跳：每 3s 刷新置顶标记，仅在失焦可见时操作
-  const topHeartbeat = setInterval(() => {
-    if (win.isDestroyed()) { clearInterval(topHeartbeat); return }
-    if (win.isVisible() && !win.isMinimized() && !win.isFocused()) {
-      win.setAlwaysOnTop(true, 'floating')
-    }
-  }, 3000)
-
-  win.on('closed', () => clearInterval(topHeartbeat))
-
   // 加载页面
   if (isDev) {
     win.loadURL(RENDERER_URL)
-    // F12 开关 DevTools，比 openDevTools 自动弹出更不干扰
     win.webContents.on('before-input-event', (event, input) => {
       if (input.key === 'F12' && input.type === 'keyDown') {
         win.webContents.toggleDevTools()
@@ -127,4 +107,41 @@ function createBallWindow() {
   return win
 }
 
-module.exports = { createMainWindow, createBallWindow }
+/**
+ * 创建指定日期的便签窗口（从日历"新窗口"打开）
+ */
+function createNoteWindow(date, colorIdx = 1) {
+  const win = new BrowserWindow({
+    width: 360,
+    height: 600,
+    minWidth: 280,
+    minHeight: 400,
+    frame: false,
+    transparent: true,
+    resizable: true,
+    maximizable: false,
+    skipTaskbar: false,
+    icon: APP_ICON,
+    webPreferences: {
+      preload: path.join(__dirname, '../../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  })
+
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+
+  win.on('will-resize', (e) => {
+    if (win._isDragging) e.preventDefault()
+  })
+
+  if (isDev) {
+    win.loadURL(`${RENDERER_URL}/#/note/${date}/${colorIdx}`)
+  } else {
+    win.loadFile(path.join(__dirname, '../../../dist/renderer/index.html'), { hash: `/note/${date}/${colorIdx}` })
+  }
+
+  return win
+}
+
+module.exports = { createMainWindow, createBallWindow, createNoteWindow }

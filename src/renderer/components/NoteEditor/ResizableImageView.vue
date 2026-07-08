@@ -6,54 +6,35 @@
     :class="{ selected }"
     data-drag-handle
   >
-    <!-- 图片：长按触发拖拽，短按（<300ms）打开预览 -->
+    <!-- 图片：单击选中，双击打开全屏预览，右键显示菜单 -->
     <img
       :src="node.attrs.src"
       :alt="node.attrs.alt || ''"
       :style="{ width: currentWidth + 'px' }"
       draggable="false"
-      @mousedown="onImgMousedown"
-      @mouseup="onImgMouseup"
+      @dblclick.prevent="openPreview"
+      @contextmenu.prevent="onContextMenu"
     />
 
     <!-- 右下角尺寸调整把手 -->
     <div class="resize-handle" @mousedown.prevent.stop="startResize" title="拖拽调整大小" />
   </node-view-wrapper>
 
-  <!-- ── 放大预览（支持拖拽平移 + 缩放） ── -->
+  <!-- ── 右键上下文菜单 ── -->
   <teleport to="body">
     <div
-      v-if="previewVisible"
-      class="image-preview-overlay"
-      @click.self="closePreview"
-      @wheel.prevent="onWheel"
+      v-if="contextMenuVisible"
+      class="img-context-menu"
+      :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
+      @mousedown.stop
     >
-      <img
-        ref="previewImgRef"
-        :src="node.attrs.src"
-        class="preview-img"
-        :style="{
-          transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
-          cursor: isPanning ? 'grabbing' : 'grab',
-        }"
-        draggable="false"
-        @mousedown.prevent="startPan"
-      />
-
-      <!-- 底部工具栏 -->
-      <div class="preview-toolbar" @mousedown.stop>
-        <button @click="zoomOut" title="缩小">－</button>
-        <span class="zoom-label">{{ Math.round(zoom * 100) }}%</span>
-        <button @click="zoomIn"  title="放大">＋</button>
-        <button @click="resetView" title="重置">⊙</button>
-        <button @click="closePreview" title="关闭">✕</button>
-      </div>
+      <button @click="copyImage">复制图片</button>
     </div>
   </teleport>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { NodeViewWrapper } from '@tiptap/vue-3'
 
 const props = defineProps({
@@ -81,67 +62,52 @@ function startResize(e) {
 }
 
 // ─── 长按 vs 短按区分 ─────────────────────────────────
-let pressTimer = null
-let pressMoved = false
-
-function onImgMousedown(e) {
-  if (e.button !== 0) return
-  pressMoved = false
-  const onMove = () => { pressMoved = true }
-  pressTimer = setTimeout(() => {
-    // 超过 300ms 视为拖拽，不打开预览（ProseMirror 接管拖拽）
-    window.removeEventListener('mousemove', onMove)
-  }, 300)
-  window.addEventListener('mousemove', onMove, { once: true })
-}
-
-function onImgMouseup(e) {
-  clearTimeout(pressTimer)
-  if (!pressMoved) openPreview()  // 短按 = 打开预览
-}
-
-// ─── 预览状态 ─────────────────────────────────────────
-const previewVisible = ref(false)
-const zoom = ref(1)
-const panX = ref(0)
-const panY = ref(0)
-const isPanning = ref(false)
 
 function openPreview() {
-  zoom.value = 1
-  panX.value = 0
-  panY.value = 0
-  previewVisible.value = true
-}
-function closePreview() {
-  previewVisible.value = false
+  window.electronAPI?.previewImageFullscreen(props.node.attrs.src)
 }
 
-// ─── 缩放 ─────────────────────────────────────────────
-const STEP = 0.2
-function zoomIn()    { zoom.value = +(Math.min(8, zoom.value + STEP)).toFixed(1) }
-function zoomOut()   { zoom.value = +(Math.max(0.1, zoom.value - STEP)).toFixed(1) }
-function resetView() { zoom.value = 1; panX.value = 0; panY.value = 0 }
-function onWheel(e)  { e.deltaY < 0 ? zoomIn() : zoomOut() }
+// ─── 右键菜单 & 复制 ─────────────────────────────────
+const contextMenuVisible = ref(false)
+const contextMenuX = ref(0)
+const contextMenuY = ref(0)
 
-// ─── 预览图拖拽平移 ───────────────────────────────────
-function startPan(e) {
-  isPanning.value = true
-  const startX = e.clientX - panX.value
-  const startY = e.clientY - panY.value
+function onContextMenu(e) {
+  contextMenuX.value = e.clientX
+  contextMenuY.value = e.clientY
+  contextMenuVisible.value = true
+}
 
-  const onMove = (e) => {
-    panX.value = e.clientX - startX
-    panY.value = e.clientY - startY
+function closeContextMenu() {
+  contextMenuVisible.value = false
+}
+
+async function copyImage() {
+  closeContextMenu()
+  try {
+    await window.electronAPI?.copyImageToClipboard(props.node.attrs.src)
+  } catch (e) {
+    console.error('[ResizableImage] 复制图片失败:', e)
   }
-  const onUp = () => {
-    isPanning.value = false
-    window.removeEventListener('mousemove', onMove)
-    window.removeEventListener('mouseup', onUp)
-  }
-  window.addEventListener('mousemove', onMove)
-  window.addEventListener('mouseup', onUp)
 }
+
+// Ctrl+C 复制（仅当该图片节点被 ProseMirror 选中时触发）
+function onKeyDown(e) {
+  if (props.selected && (e.ctrlKey || e.metaKey) && e.key === 'c') {
+    e.preventDefault()
+    copyImage()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('mousedown', closeContextMenu)
+  window.addEventListener('keydown', onKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('mousedown', closeContextMenu)
+  window.removeEventListener('keydown', onKeyDown)
+})
 </script>
 
 <style scoped>
@@ -150,7 +116,7 @@ function startPan(e) {
   position: relative;
   margin: 6px 2px;
   line-height: 0;
-  cursor: grab;          /* 整块可拖拽排序 */
+  cursor: grab;
 }
 .image-wrapper:active {
   cursor: grabbing;
@@ -161,7 +127,7 @@ function startPan(e) {
   border-radius: 6px;
   max-width: 100%;
   height: auto;
-  pointer-events: none;  /* 交给 wrapper 的 drag-handle 接管 */
+  pointer-events: none;
   transition: outline 0.15s;
   user-select: none;
 }
@@ -171,7 +137,7 @@ function startPan(e) {
   border-radius: 6px;
 }
 
-/* 让图片本身也能响应 mousedown（用于短按预览） */
+/* 让图片本身也能响应 mousedown */
 .image-wrapper img {
   pointer-events: auto;
 }
@@ -193,61 +159,32 @@ function startPan(e) {
   opacity: 0.85;
 }
 
-/* ── 预览遮罩 ───────────────────────────────────────── */
-.image-preview-overlay {
+/* ── 右键菜单 ───────────────────────────────────────── */
+.img-context-menu {
   position: fixed;
-  inset: 0;
-  z-index: 9999;
-  background: rgba(0, 0, 0, 0.82);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.preview-img {
-  max-width: 88vw;
-  max-height: 82vh;
+  z-index: 10000;
+  background: rgba(40, 40, 44, 0.96);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
-  transform-origin: center;
-  transition: transform 0.1s ease;
-  user-select: none;
+  padding: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  min-width: 120px;
 }
-
-/* 底部工具栏 */
-.preview-toolbar {
-  position: fixed;
-  bottom: 28px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(30,30,30,0.88);
-  backdrop-filter: blur(8px);
-  border-radius: 24px;
-  padding: 6px 16px;
-}
-.preview-toolbar button {
+.img-context-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
   background: none;
   border: none;
-  color: white;
-  font-size: 16px;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-}
-.preview-toolbar button:hover { background: rgba(255,255,255,0.2); }
-.zoom-label {
-  color: rgba(255,255,255,0.85);
+  color: rgba(255, 255, 255, 0.9);
   font-size: 13px;
-  min-width: 44px;
-  text-align: center;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background 0.12s;
+}
+.img-context-menu button:hover {
+  background: rgba(155, 142, 196, 0.35);
 }
 </style>
