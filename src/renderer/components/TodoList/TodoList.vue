@@ -12,6 +12,7 @@
         :key="todo.id"
         :todo="todo"
         :index="index"
+        :highlight-keyword="findKeyword"
         @toggle="store.toggleTodo(todo.id)"
         @delete="store.deleteTodo(todo.id)"
         @update-deadline="updateDeadline(todo.id, $event)"
@@ -51,13 +52,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, nextTick, onMounted } from 'vue'
+import { ref, reactive, nextTick, onMounted, inject } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDailyStore } from '../../stores/dailyStore'
 import TodoItem from './TodoItem.vue'
 import MigrateMenu from './MigrateMenu.vue'
 
 const store = useDailyStore()
+const findKeyword = inject('findKeyword', ref(''))
 const isAdding = ref(false)
 const newTodoText = ref('')
 const inputRef = ref(null)

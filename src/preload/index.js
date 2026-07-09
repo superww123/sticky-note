@@ -14,7 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   dragEnd:   () => ipcRenderer.send('window:drag-end'),
   dragWindow: (x, y) => ipcRenderer.send('window:drag', { x, y }),
   setWindowOpacity: (value) => ipcRenderer.send('window:set-opacity', value),
-  openNoteWindow: (date) => ipcRenderer.send('window:open-note', date),
+  openNoteWindow: (dateOrObj) => ipcRenderer.send('window:open-note', dateOrObj),
   closeSelf: () => ipcRenderer.send('window:close-self'),
 
   // ─── 数据读写 ───────────────────────────────────────────
@@ -43,6 +43,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // ─── 外部链接 ─────────────────────────────────────────
   openExternal: (url) => ipcRenderer.send('shell:open-external', url),
+
+  // ─── 全局搜索 ─────────────────────────────────────────
+  searchAllNotes: (keyword) => ipcRenderer.invoke('search:all-notes', keyword),
+  onFindKeyword: (cb) => ipcRenderer.on('note:find-keyword', (_, kw) => cb(kw)),
+  getDatesWithContent: (dates) => ipcRenderer.invoke('data:dates-with-content', dates),
 
   // ─── 主进程推送事件 ─────────────────────────────────────
   onOpacityChanged: (callback) => ipcRenderer.on('opacity-changed', (_, value) => callback(value)),

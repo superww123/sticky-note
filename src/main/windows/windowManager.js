@@ -12,6 +12,9 @@ const RENDERER_URL = process.env['ELECTRON_RENDERER_URL'] || 'http://localhost:5
 // 应用图标（ICO 文件，用于窗口标题栏 / 任务栏 / dock）
 const APP_ICON = path.join(__dirname, '../../../assets/icon.ico')
 
+// note 子窗口错位计数器（每次创建递增，循环 8 次后归零）
+let noteWindowOffset = 0
+
 /**
  * 创建主便签窗口
  */
@@ -112,9 +115,21 @@ function createBallWindow() {
  * 创建指定日期的便签窗口（从日历"新窗口"打开）
  */
 function createNoteWindow(date, colorIdx = 1) {
+  const { height: sh } = screen.getPrimaryDisplay().workAreaSize
+  const winW = 360, winH = 600
+  const step = 30
+  const offset = (noteWindowOffset % 8) * step
+  noteWindowOffset++
+
+  // 左侧垂直居中，依次向右下错开
+  const x = 20 + offset
+  const y = Math.max(20, Math.floor((sh - winH) / 2) - 60 + offset)
+
   const win = new BrowserWindow({
-    width: 360,
-    height: 600,
+    width: winW,
+    height: winH,
+    x,
+    y,
     minWidth: 280,
     minHeight: 400,
     frame: false,

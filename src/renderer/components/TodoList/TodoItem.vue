@@ -37,9 +37,8 @@
       class="todo-text"
       :class="{ 'line-through': todo.completed }"
       @dblclick.stop="startEdit"
-    >
-      {{ todo.text }}
-    </span>
+      v-html="highlightedText"
+    ></span>
     <span v-if="todo.migratedFrom" class="migrated-tag" title="从昨日迁移">↑</span>
 
     <!-- 截止时间 -->
@@ -79,9 +78,19 @@ import { ref, computed, nextTick, watch } from 'vue'
 const props = defineProps({
   todo: { type: Object, required: true },
   index: { type: Number, required: true },
+  highlightKeyword: { type: String, default: '' },
 })
 
 const emit = defineEmits(['toggle', 'delete', 'update-deadline', 'update-text', 'migrate-request', 'dragstart', 'dragover', 'drop'])
+
+// 搜索高亮
+const highlightedText = computed(() => {
+  const text = props.todo.text || ''
+  const kw = props.highlightKeyword
+  if (!kw) return text
+  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return text.replace(new RegExp(escaped, 'gi'), '<mark>$&</mark>')
+})
 
 const showDatePicker = ref(false)
 const datePickerRef = ref(null)

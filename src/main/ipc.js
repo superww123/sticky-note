@@ -7,6 +7,8 @@ const {
   getAllCalendarMarks,
   upsertCalendarMark,
   deleteCalendarMark,
+  searchAllNotes,
+  getDatesWithContent,
 } = require('./database/db')
 const { archiveDailyNote } = require('./word/archiver')
 const { migrateOnStartup } = require('./scheduler')
@@ -33,8 +35,14 @@ function setupIpc(mainWindow, ballWindow) {
     mainWindow.focus()
   })
 
-  ipcMain.on('window:minimize-to-tray', () => {
-    mainWindow.hide()
+  ipcMain.on('window:minimize-to-tray', (event) => {
+    // 主窗口隐藏到托盘；note 子窗口直接最小化到任务栏
+    const sender = BrowserWindow.fromWebContents(event.sender)
+    if (sender && sender !== mainWindow && !sender.isDestroyed()) {
+      sender.minimize()
+    } else {
+      mainWindow.hide()
+    }
   })
 
   ipcMain.on('window:set-opacity', (event, value) => {
@@ -55,9 +63,17 @@ function setupIpc(mainWindow, ballWindow) {
     if (sender && !sender.isDestroyed()) sender.close()
   })
 
-  ipcMain.on('window:open-note', (event, date) => {
-    noteColorIdx = (noteColorIdx % THEME_COUNT) + 1  // 1~5 循环
-    createNoteWindow(date, noteColorIdx)
+  ipcMain.on('window:open-note', (event, payload) => {
+    // 兼容旧格式（字符串 date）和新格式（{ date, keyword }）
+    const date = typeof payload === 'string' ? payload : payload?.date
+    const keyword = typeof payload === 'string' ? null : payload?.keyword
+    noteColorIdx = (noteColorIdx % THEME_COUNT) + 1
+    const win = createNoteWindow(date, noteColorIdx)
+    if (keyword) {
+      win.webContents.once('did-finish-load', () => {
+        setTimeout(() => win.webContents.send('note:find-keyword', keyword), 300)
+      })
+    }
   })
 
   ipcMain.handle('window:get-pos', () => {
@@ -184,6 +200,16 @@ function setupIpc(mainWindow, ballWindow) {
   })
 
   ipcMain.handle('window:get-pin', () => state.isPinned)
+
+  // ─── 全局搜索 ─────────────────────────────────────────
+
+  ipcMain.handle('search:all-notes', (event, keyword) => {
+    return searchAllNotes(keyword)
+  })
+
+  ipcMain.handle('data:dates-with-content', (event, dates) => {
+    return getDatesWithContent(dates)
+  })
 
   // ─── 图片全屏预览 ─────────────────────────────────────
 

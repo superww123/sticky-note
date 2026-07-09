@@ -9,6 +9,20 @@
         <button class="close-cal" @click="$emit('close')">✕</button>
       </div>
 
+      <!-- 批量打开行（V4 样式：步进器 + 渐变按钮） -->
+      <div class="batch-row">
+        <span class="batch-lbl">打开前</span>
+        <div class="batch-stepper">
+          <button @mousedown.prevent @click="batchDays = Math.max(1, batchDays - 1)">−</button>
+          <span>{{ batchDays }}</span>
+          <button @mousedown.prevent @click="batchDays = Math.min(14, batchDays + 1)">＋</button>
+        </div>
+        <span class="batch-lbl">天</span>
+        <button class="batch-btn" @click="batchOpen" :disabled="batchLoading">
+          {{ batchLoading ? '打开中…' : '一键打开' }}
+        </button>
+      </div>
+
       <!-- 星期标题 -->
       <div class="cal-weekdays">
         <span v-for="d in weekdays" :key="d">{{ d }}</span>
@@ -56,6 +70,44 @@ import { useCalendarStore } from '../../stores/calendarStore'
 const emit = defineEmits(['close'])
 const store = useDailyStore()
 const calStore = useCalendarStore()
+
+// ── 批量打开 ──────────────────────────────────────────────
+const batchDays = ref(3)
+const batchLoading = ref(false)
+
+async function batchOpen() {
+  const n = Math.max(1, Math.min(14, batchDays.value || 3))
+  batchDays.value = n
+  batchLoading.value = true
+
+  // 生成候选日期（今天往前 n 天，不含今天）
+  const candidates = []
+  const base = new Date()
+  for (let i = 1; i <= n; i++) {
+    const d = new Date(base)
+    d.setDate(base.getDate() - i)
+    const str = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+    candidates.push(str)
+  }
+
+  // 过滤出有内容的日期
+  let toOpen = candidates
+  try {
+    const withContent = await window.electronAPI?.getDatesWithContent(candidates)
+    if (withContent && withContent.length > 0) toOpen = withContent
+  } catch (e) {
+    console.error('[Calendar] getDatesWithContent 失败:', e)
+  }
+
+  // 逐个打开，间隔 150ms 避免同时创建过多进程
+  for (let i = 0; i < toOpen.length; i++) {
+    if (i > 0) await new Promise(r => setTimeout(r, 150))
+    window.electronAPI?.openNoteWindow(toOpen[i])
+  }
+
+  batchLoading.value = false
+  emit('close')
+}
 
 const today = new Date()
 const year = ref(today.getFullYear())
@@ -143,3 +195,75 @@ function openInNew() {
 
 onMounted(() => calStore.loadAllMarks())
 </script>
+
+<style scoped>
+/* ── 批量打开行 ── */
+.batch-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 2px 7px;
+  border-bottom: 1px solid rgba(180, 170, 210, 0.2);
+  margin-bottom: 6px;
+}
+
+.batch-lbl {
+  font-size: 11px;
+  color: rgba(74, 64, 96, 0.55);
+  flex-shrink: 0;
+}
+
+/* 步进器 */
+.batch-stepper {
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(155, 142, 196, 0.4);
+  border-radius: 6px;
+  overflow: hidden;
+  background: white;
+  flex-shrink: 0;
+}
+
+.batch-stepper button {
+  width: 18px;
+  height: 20px;
+  background: rgba(155, 142, 196, 0.1);
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: #7a6eaa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+.batch-stepper button:hover { background: rgba(155, 142, 196, 0.28); }
+
+.batch-stepper span {
+  width: 22px;
+  text-align: center;
+  font-size: 12px;
+  color: #4a4060;
+  font-weight: 500;
+  user-select: none;
+}
+
+/* 一键打开按钮 */
+.batch-btn {
+  flex: 1;
+  height: 24px;
+  background: linear-gradient(135deg, #9b8ec4, #7a6eaa);
+  border: none;
+  border-radius: 7px;
+  font-size: 11px;
+  color: white;
+  cursor: pointer;
+  font-family: 'Microsoft YaHei', sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  transition: filter 0.15s;
+}
+.batch-btn:hover { filter: brightness(1.1); }
+.batch-btn:disabled { opacity: 0.6; cursor: not-allowed; filter: none; }
+</style>

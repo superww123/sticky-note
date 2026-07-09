@@ -25,7 +25,7 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, watch, ref } from 'vue'
+import { onBeforeUnmount, onMounted, watch, ref, inject } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import TextStyle from '@tiptap/extension-text-style'
@@ -39,6 +39,10 @@ import FormatToolbar from './FormatToolbar.vue'
 import { useDailyStore } from '../../stores/dailyStore'
 
 const store = useDailyStore()
+
+// ── 搜索高亮 ──────────────────────────────────────────────
+const findKeyword = inject('findKeyword', ref(''))
+let isHighlighting = false
 
 const editor = useEditor({
   content: store.noteContent,
@@ -79,6 +83,7 @@ const editor = useEditor({
     },
   },
   onUpdate: ({ editor }) => {
+    if (isHighlighting) return
     clearTimeout(saveTimer)
     saveTimer = setTimeout(() => {
       store.saveNote(editor.getJSON())
@@ -94,6 +99,39 @@ const toast = ref({ visible: false, message: '', type: 'success' })
 onMounted(() => {
   document.addEventListener('preview-image-request', onPreviewImageRequest)
 })
+
+// 收到搜索关键词时，高亮文档内所有匹配并滚动到第一处
+watch(findKeyword, (kw) => {
+  if (kw) highlightKeyword(kw)
+})
+
+function highlightKeyword(kw) {
+  if (!editor.value || !kw) return
+  const lowerKw = kw.toLowerCase()
+  const positions = []
+
+  editor.value.state.doc.descendants((node, pos) => {
+    if (node.type.name !== 'text' || !node.text) return
+    const lowerText = node.text.toLowerCase()
+    let idx = 0
+    while ((idx = lowerText.indexOf(lowerKw, idx)) !== -1) {
+      positions.push({ from: pos + idx, to: pos + idx + kw.length })
+      idx += kw.length
+    }
+  })
+
+  if (positions.length === 0) return
+
+  isHighlighting = true
+  const chain = editor.value.chain()
+  for (const { from, to } of positions) {
+    chain.setTextSelection({ from, to }).setHighlight({ color: '#ffeb3b' })
+  }
+  // 滚动到第一处
+  chain.setTextSelection({ from: positions[0].from, to: positions[0].to }).scrollIntoView()
+  chain.run()
+  isHighlighting = false
+}
 
 function onPreviewImageRequest(e) {
   const clickedSrc = e.detail.src

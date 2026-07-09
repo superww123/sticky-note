@@ -717,3 +717,13 @@ html, body, #app {
 
 .ol-pop-confirm:hover { background: #7a6eaa; }
 
+
+
+/* ─── 搜索高亮 mark ───────────────────────────────────── */
+.todo-text mark {
+  background: #ffeb3b;
+  border-radius: 2px;
+  padding: 0 1px;
+  color: inherit;
+  font-style: normal;
+}

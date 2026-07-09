@@ -4,6 +4,18 @@
     <div class="title-bar" @mousedown="onDrag">
       <DateBar />
 
+      <!-- 搜索按钮（主窗口专用） -->
+      <button
+        v-if="!isNoteWindow"
+        class="ctrl-btn search-btn"
+        title="搜索"
+        @mousedown.stop
+        @click="showSearch = true"
+      >🔍</button>
+
+      <!-- 搜索浮层 -->
+      <SearchPanel v-if="showSearch && !isNoteWindow" @close="showSearch = false" />
+
       <!-- 透明度滑块 -->
       <div
         class="opacity-slider-wrap"
@@ -26,6 +38,7 @@
         >↑</button>
         <button v-if="!isNoteWindow" class="ctrl-btn tray-btn" title="最小化到托盘" @click="minimizeToTray">－</button>
         <button v-if="!isNoteWindow" class="ctrl-btn ball-btn" title="收起为小球"   @click="minimizeToBall">●</button>
+        <button v-if="isNoteWindow"  class="ctrl-btn tray-btn" title="最小化到任务栏" @click="minimizeToTray">－</button>
         <button class="ctrl-btn close-btn" title="关闭"        @click="closeApp">✕</button>
       </div>
     </div>
@@ -50,11 +63,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, provide } from 'vue'
 import { useRoute } from 'vue-router'
 import DateBar from './components/DateBar/DateBar.vue'
 import TodoList from './components/TodoList/TodoList.vue'
 import NoteEditor from './components/NoteEditor/NoteEditor.vue'
+import SearchPanel from './components/SearchPanel.vue'
 import { NOTE_THEMES } from './themes.js'
 import { useDailyStore } from './stores/dailyStore'
 
@@ -63,6 +77,11 @@ const store = useDailyStore()
 const isNoteWindow = computed(() => route.path.startsWith('/note/'))
 const isPinned = ref(false)
 const contentRef = ref(null)
+
+// ── 搜索 ──────────────────────────────────────────────────
+const showSearch = ref(false)
+const findKeyword = ref('')
+provide('findKeyword', findKeyword)
 
 // ── 上下分割比例 ──────────────────────────────────────────
 const SPLIT_KEY = 'sticky-note-split'
@@ -166,6 +185,13 @@ onMounted(async () => {
     }
     dayCheckTimer = setInterval(checkDayChange, 60_000)
     window.electronAPI?.onDayChanged(checkDayChange)
+  }
+
+  // note 子窗口：接收主进程推送的搜索关键词，触发高亮
+  if (isNoteWindow.value) {
+    window.electronAPI?.onFindKeyword((kw) => {
+      findKeyword.value = kw
+    })
   }
 })
 
