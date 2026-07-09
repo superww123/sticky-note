@@ -1,4 +1,4 @@
-const { BrowserWindow, screen } = require('electron')
+const { BrowserWindow, screen, Menu, MenuItem } = require('electron')
 const path = require('path')
 const fs = require('fs')
 
@@ -61,6 +61,7 @@ function createMainWindow() {
     }
   })
 
+  setupSpellCheckContextMenu(win)
   return win
 }
 
@@ -141,7 +142,33 @@ function createNoteWindow(date, colorIdx = 1) {
     win.loadFile(path.join(__dirname, '../../../dist/renderer/index.html'), { hash: `/note/${date}/${colorIdx}` })
   }
 
+  setupSpellCheckContextMenu(win)
   return win
 }
 
 module.exports = { createMainWindow, createBallWindow, createNoteWindow }
+
+/**
+ * 为窗口绑定拼写检查右键菜单（仅当右键点击拼错的单词时弹出）
+ */
+function setupSpellCheckContextMenu(win) {
+  win.webContents.on('context-menu', (event, params) => {
+    if (!params.misspelledWord) return
+
+    const menu = new Menu()
+    for (const suggestion of params.dictionarySuggestions) {
+      menu.append(new MenuItem({
+        label: suggestion,
+        click: () => win.webContents.replaceMisspelling(suggestion),
+      }))
+    }
+    if (params.dictionarySuggestions.length > 0) {
+      menu.append(new MenuItem({ type: 'separator' }))
+    }
+    menu.append(new MenuItem({
+      label: '添加到词典',
+      click: () => win.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord),
+    }))
+    menu.popup()
+  })
+}

@@ -5,80 +5,147 @@
   <title>图片预览</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
-    #overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.86);
+    html, body {
+      width: 100%; height: 100%;
+      background: transparent;
+      overflow: hidden;
+      border-radius: 12px;
+    }
+    #app {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      background: #1c1c1e;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    /* ── 顶部拖动区 ── */
+    #titlebar {
+      -webkit-app-region: drag;
+      height: 38px;
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
-    }
-    #preview-img {
-      max-width: 90vw;
-      max-height: 85vh;
-      border-radius: 8px;
-      box-shadow: 0 8px 48px rgba(0, 0, 0, 0.7);
-      transform-origin: center;
-      cursor: grab;
+      background: rgba(26, 26, 28, 0.98);
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       user-select: none;
     }
-    #preview-img:active { cursor: grabbing; }
-    #toolbar {
-      position: fixed;
-      bottom: 32px;
-      left: 50%;
-      transform: translateX(-50%);
+    #counter {
+      -webkit-app-region: no-drag;
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 12px;
+      font-family: system-ui, -apple-system, sans-serif;
+      letter-spacing: 1px;
+    }
+
+    /* ── 图片区 ── */
+    #canvas {
+      flex: 1;
+      overflow: hidden;
       display: flex;
       align-items: center;
-      gap: 8px;
-      background: rgba(30, 30, 30, 0.9);
-      backdrop-filter: blur(12px);
-      border-radius: 28px;
-      padding: 7px 18px;
-      z-index: 10;
+      justify-content: center;
+      cursor: grab;
+      background: #1c1c1e;
+      position: relative;
+    }
+    #canvas.dragging { cursor: grabbing; }
+    #preview-img {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 6px;
+      user-select: none;
+      transform-origin: center;
+      pointer-events: none;
+      display: block;
+    }
+
+    /* ── 底部工具栏 ── */
+    #toolbar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(26, 26, 28, 0.98);
+      padding: 6px 14px;
+      justify-content: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      -webkit-app-region: no-drag;
     }
     #toolbar button {
       background: none;
       border: none;
-      color: #fff;
+      color: rgba(255, 255, 255, 0.8);
       font-size: 16px;
-      width: 32px;
-      height: 32px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.12s;
+      transition: background 0.12s, color 0.12s;
+      flex-shrink: 0;
     }
-    #toolbar button:hover { background: rgba(255, 255, 255, 0.18); }
+    #toolbar button:hover { background: rgba(255, 255, 255, 0.14); }
+    #toolbar button:disabled { opacity: 0.22; cursor: default; }
+    #toolbar button:disabled:hover { background: none; }
+    #btn-prev, #btn-next { font-size: 18px; }
+    .sep {
+      width: 1px;
+      height: 16px;
+      background: rgba(255, 255, 255, 0.1);
+      margin: 0 4px;
+      flex-shrink: 0;
+    }
     #zoom-label {
-      color: rgba(255, 255, 255, 0.85);
-      font-size: 13px;
-      min-width: 46px;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 12px;
+      min-width: 40px;
       text-align: center;
       font-family: system-ui, sans-serif;
     }
+    #btn-copy.copied { color: #4caf82; }
   </style>
 </head>
 <body>
-  <div id="overlay">
-    <img id="preview-img" src="" alt="" draggable="false" />
-  </div>
-  <div id="toolbar">
-    <button id="btn-out">－</button>
-    <span id="zoom-label">100%</span>
-    <button id="btn-in">＋</button>
-    <button id="btn-reset">⊙</button>
-    <button id="btn-close">✕</button>
+  <div id="app">
+    <div id="titlebar">
+      <span id="counter">1 / 1</span>
+    </div>
+    <div id="canvas">
+      <img id="preview-img" src="" alt="" draggable="false" />
+    </div>
+    <div id="toolbar">
+      <button id="btn-prev" title="上一张（← 键）">‹</button>
+      <button id="btn-next" title="下一张（→ 键）">›</button>
+      <div class="sep"></div>
+      <button id="btn-out" title="缩小（- 键）">－</button>
+      <span id="zoom-label">100%</span>
+      <button id="btn-in" title="放大（+ 键）">＋</button>
+      <button id="btn-reset" title="重置（0 键）">⊙</button>
+      <div class="sep"></div>
+      <button id="btn-copy" title="复制图片">⎘</button>
+      <div class="sep"></div>
+      <button id="btn-close" title="关闭（Esc）">✕</button>
+    </div>
   </div>
 
   <script>
     const img     = document.getElementById('preview-img')
+    const counter = document.getElementById('counter')
     const label   = document.getElementById('zoom-label')
-    const overlay = document.getElementById('overlay')
+    const canvas  = document.getElementById('canvas')
+    const btnPrev = document.getElementById('btn-prev')
+    const btnNext = document.getElementById('btn-next')
+    const btnCopy = document.getElementById('btn-copy')
+
+    let images = []
+    let currentIndex = 0
     let zoom = 1, px = 0, py = 0
     const STEP = 0.2
 
@@ -86,40 +153,79 @@
       img.style.transform = `translate(${px}px, ${py}px) scale(${zoom})`
       label.textContent = Math.round(zoom * 100) + '%'
     }
+
     function zoomIn()  { zoom = Math.min(8, +(zoom + STEP).toFixed(1)); apply() }
     function zoomOut() { zoom = Math.max(0.1, +(zoom - STEP).toFixed(1)); apply() }
     function reset()   { zoom = 1; px = 0; py = 0; apply() }
-    function close()   { window.previewAPI?.close() }
+
+    function showImage(index) {
+      currentIndex = (index + images.length) % images.length
+      img.src = images[currentIndex]
+      counter.textContent = `${currentIndex + 1} / ${images.length}`
+      btnPrev.disabled = images.length <= 1
+      btnNext.disabled = images.length <= 1
+      reset()
+    }
+
+    function navigate(delta) {
+      if (images.length <= 1) return
+      showImage(currentIndex + delta)
+    }
 
     document.getElementById('btn-in').onclick    = zoomIn
     document.getElementById('btn-out').onclick   = zoomOut
     document.getElementById('btn-reset').onclick = reset
-    document.getElementById('btn-close').onclick = close
+    document.getElementById('btn-close').onclick = () => window.previewAPI?.close()
+    btnPrev.onclick = () => navigate(-1)
+    btnNext.onclick = () => navigate(1)
 
-    overlay.addEventListener('click', e => { if (e.target === overlay) close() })
-    overlay.addEventListener('wheel', e => {
-      e.preventDefault()
-      e.deltaY < 0 ? zoomIn() : zoomOut()
-    }, { passive: false })
+    btnCopy.onclick = async () => {
+      if (!images[currentIndex]) return
+      await window.previewAPI?.copyImage(images[currentIndex])
+      btnCopy.classList.add('copied')
+      btnCopy.textContent = '✓'
+      setTimeout(() => {
+        btnCopy.classList.remove('copied')
+        btnCopy.textContent = '⎘'
+      }, 1200)
+    }
 
-    img.addEventListener('mousedown', e => {
+    // 拖拽平移图片
+    canvas.addEventListener('mousedown', e => {
       if (e.button !== 0) return
       e.preventDefault()
       const sx = e.clientX - px, sy = e.clientY - py
+      canvas.classList.add('dragging')
       const onMove = e => { px = e.clientX - sx; py = e.clientY - sy; apply() }
-      const onUp   = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+      const onUp   = () => {
+        canvas.classList.remove('dragging')
+        window.removeEventListener('mousemove', onMove)
+        window.removeEventListener('mouseup', onUp)
+      }
       window.addEventListener('mousemove', onMove)
       window.addEventListener('mouseup', onUp)
     })
 
+    // 滚轮缩放
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault()
+      e.deltaY < 0 ? zoomIn() : zoomOut()
+    }, { passive: false })
+
+    // 键盘快捷键
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape')               close()
-      else if (e.key === '+' || e.key === '=') zoomIn()
-      else if (e.key === '-')               zoomOut()
-      else if (e.key === '0')               reset()
+      if      (e.key === 'Escape')              window.previewAPI?.closeAll()
+      else if (e.key === '+' || e.key === '=')  zoomIn()
+      else if (e.key === '-')                   zoomOut()
+      else if (e.key === '0')                   reset()
+      else if (e.key === 'ArrowLeft')           navigate(-1)
+      else if (e.key === 'ArrowRight')          navigate(1)
     })
 
-    window.previewAPI?.onInitImage(src => { img.src = src })
+    window.previewAPI?.onInitData(({ images: imgs, currentIndex: idx }) => {
+      images = imgs || []
+      showImage(idx || 0)
+    })
   </script>
 </body>
 </html>

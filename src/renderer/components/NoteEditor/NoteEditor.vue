@@ -25,7 +25,7 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, watch, ref } from 'vue'
+import { onBeforeUnmount, onMounted, watch, ref } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import TextStyle from '@tiptap/extension-text-style'
@@ -34,6 +34,7 @@ import Highlight from '@tiptap/extension-highlight'
 import Link from '@tiptap/extension-link'
 import ResizableImage from './ResizableImage.js'
 import { FontSize } from './fontSizeExtension.js'
+import { CustomListItem } from './customListItemExtension.js'
 import FormatToolbar from './FormatToolbar.vue'
 import { useDailyStore } from '../../stores/dailyStore'
 
@@ -42,7 +43,8 @@ const store = useDailyStore()
 const editor = useEditor({
   content: store.noteContent,
   extensions: [
-    StarterKit,
+    StarterKit.configure({ listItem: false }),
+    CustomListItem,
     TextStyle,
     Color,
     Highlight.configure({ multicolor: true }),
@@ -51,6 +53,15 @@ const editor = useEditor({
     Link.configure({ openOnClick: false }),
   ],
   editorProps: {
+    handleClick(view, pos, event) {
+      const target = event.target.closest('a[href]')
+      if (target) {
+        event.preventDefault()
+        window.electronAPI?.openExternal(target.href)
+        return true
+      }
+      return false
+    },
     handlePaste(view, event) {
       const items = Array.from(event.clipboardData?.items || [])
       const imageItem = items.find(item => item.type.startsWith('image/'))
@@ -79,6 +90,21 @@ let saveTimer = null
 let toastTimer = null
 const archiving = ref(false)
 const toast = ref({ visible: false, message: '', type: 'success' })
+
+onMounted(() => {
+  document.addEventListener('preview-image-request', onPreviewImageRequest)
+})
+
+function onPreviewImageRequest(e) {
+  const clickedSrc = e.detail.src
+  const images = []
+  editor.value?.state.doc.descendants(node => {
+    if (node.type.name === 'image' && node.attrs.src) images.push(node.attrs.src)
+  })
+  if (!images.includes(clickedSrc)) images.unshift(clickedSrc)
+  const currentIndex = Math.max(0, images.indexOf(clickedSrc))
+  window.electronAPI?.previewImageFullscreen({ images, currentIndex })
+}
 
 watch(() => store.noteContent, (newContent) => {
   if (editor.value && JSON.stringify(editor.value.getJSON()) !== JSON.stringify(newContent)) {
@@ -109,6 +135,7 @@ onBeforeUnmount(() => {
   clearTimeout(saveTimer)
   clearTimeout(toastTimer)
   editor.value?.destroy()
+  document.removeEventListener('preview-image-request', onPreviewImageRequest)
 })
 </script>
 

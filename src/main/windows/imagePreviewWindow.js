@@ -1,30 +1,43 @@
 const { BrowserWindow, screen } = require('electron')
 const path = require('path')
 
-let previewWin = null
+const openWindows = new Set()
+let windowOffset = 0
 
-function openImagePreviewWindow(src) {
-  // 若已有预览窗口，直接更新图片并聚焦
-  if (previewWin && !previewWin.isDestroyed()) {
-    previewWin.webContents.send('init-image', src)
-    previewWin.focus()
-    return
+function openImagePreviewWindow(data) {
+  // 兼容旧的字符串调用 (src string) 和新的对象调用 ({ images, currentIndex })
+  let images, currentIndex
+  if (typeof data === 'string') {
+    images = [data]
+    currentIndex = 0
+  } else {
+    images = data.images || []
+    currentIndex = data.currentIndex || 0
   }
 
-  // 在鼠标所在显示器全屏显示
   const { bounds } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
 
-  previewWin = new BrowserWindow({
-    x: bounds.x,
-    y: bounds.y,
-    width: bounds.width,
-    height: bounds.height,
+  // 每个新窗口错开 30px，最多错开 8 次后归零
+  const offset = (windowOffset % 8) * 30
+  windowOffset++
+
+  const winW = 720
+  const winH = 560
+  const x = Math.round(bounds.x + (bounds.width - winW) / 2) + offset
+  const y = Math.round(bounds.y + (bounds.height - winH) / 2) + offset
+
+  const win = new BrowserWindow({
+    x, y,
+    width: winW,
+    height: winH,
+    minWidth: 320,
+    minHeight: 260,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
-    resizable: false,
-    movable: false,
+    resizable: true,
+    movable: true,
     focusable: true,
     webPreferences: {
       nodeIntegration: false,
@@ -33,14 +46,20 @@ function openImagePreviewWindow(src) {
     },
   })
 
-  previewWin.setAlwaysOnTop(true, 'screen-saver')
-  previewWin.loadFile(path.join(__dirname, '../../../assets/imagePreview.html'))
+  win.setAlwaysOnTop(true, 'screen-saver')
+  win.loadFile(path.join(__dirname, '../../../assets/imagePreview.html'))
 
-  previewWin.webContents.once('did-finish-load', () => {
-    previewWin.webContents.send('init-image', src)
+  win.webContents.once('did-finish-load', () => {
+    win.webContents.send('init-data', { images, currentIndex })
   })
 
-  previewWin.on('closed', () => { previewWin = null })
+  win.on('closed', () => openWindows.delete(win))
+  openWindows.add(win)
 }
 
-module.exports = { openImagePreviewWindow }
+function closeAllImagePreviewWindows() {
+  openWindows.forEach(win => { if (!win.isDestroyed()) win.close() })
+  openWindows.clear()
+}
+
+module.exports = { openImagePreviewWindow, closeAllImagePreviewWindows }

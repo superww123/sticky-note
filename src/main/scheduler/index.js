@@ -68,8 +68,11 @@ function migrateOnStartup() {
     if (!data) continue
 
     for (const todo of data.todos) {
-      if (todo.completed) continue
       const origId = String(todo.originalId || todo.id)
+      if (todo.completed) {
+        existingOriginalIds.add(origId)  // 已完成的也占位，防止同 origId 的旧版本被重新迁移
+        continue
+      }
       if (existingOriginalIds.has(origId)) continue
 
       existingOriginalIds.add(origId)

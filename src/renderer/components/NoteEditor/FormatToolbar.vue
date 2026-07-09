@@ -60,6 +60,38 @@
       >🎨</button>
     </div>
 
+    <div class="fmt-sep"></div>
+
+    <!-- 格式刷 🖌 单击刷一次；双击持续刷 -->
+    <button
+      class="fmt-btn fmt-painter"
+      :class="{ active: paintMode !== null, 'paint-persistent': paintMode === 'persistent' }"
+      @mousedown.prevent.stop="onPaintMousedown"
+      title="格式刷（单击刷一次；双击持续刷）"
+    >
+      <span style="display:inline-block;transform:rotate(-45deg);line-height:1">✏️</span>
+    </button>
+
+    <div class="fmt-sep"></div>
+
+    <!-- 清除格式 ↺ -->
+    <div class="fmt-pop-wrap">
+      <button
+        class="fmt-btn fmt-clear"
+        :class="{ active: openPop === 'clear' || clearMode !== null, 'paint-persistent': pendingClearPersistent || clearPersistent }"
+        @mousedown.prevent.stop="onClearBtnMousedown"
+        title="清除格式（单击选一次；双击持续清除）"
+      >↺</button>
+    </div>
+
+    <!-- 拼写检查 ？ -->
+    <button
+      class="fmt-btn fmt-spell"
+      :class="{ 'spell-on': spellOn }"
+      @mousedown.prevent="toggleSpell"
+      title="拼写检查"
+    >？</button>
+
     <!-- 弹窗通过 Teleport 挂到 body，避免被 overflow:hidden 裁剪 -->
     <!-- 关键：弹窗容器用 @mousedown.prevent.stop，阻止编辑器失焦；按钮用 @click -->
     <Teleport to="body">
@@ -145,6 +177,26 @@
           ></button>
         </div>
       </div>
+
+      <!-- 清除格式弹窗 -->
+      <div
+        v-if="openPop === 'clear'"
+        class="fmt-popup"
+        :style="floatStyle"
+        ref="popupRef"
+        @mousedown.prevent.stop
+      >
+        <div class="pop-arrow-up"></div>
+        <div v-if="pendingClearPersistent" class="clear-persistent-hint">持续模式</div>
+        <button class="pop-item" @mousedown.prevent @click="startClear('keep-list')">
+          <span class="list-icon">•≡</span>
+          <span class="pop-label">保留列表</span>
+        </button>
+        <button class="pop-item" @mousedown.prevent @click="startClear('clear-all')">
+          <span class="list-icon" style="font-size:11px;color:#e05">✕</span>
+          <span class="pop-label">全部取消</span>
+        </button>
+      </div>
     </Teleport>
   </div>
 </template>
@@ -153,6 +205,161 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({ editor: Object })
+
+// ─── 格式刷 ───────────────────────────────────────────────────────
+const paintMode = ref(null)   // null | 'single' | 'persistent'
+const capturedFormat = ref(null)
+let lastPaintDown = 0
+let _skipNextPaintApply = false
+
+function onPaintMousedown() {
+  const now = Date.now()
+  const isDouble = now - lastPaintDown < 300
+  lastPaintDown = now
+
+  if (paintMode.value === 'persistent') { exitPaintMode(); return }
+  if (paintMode.value === 'single' && isDouble) {
+    paintMode.value = 'persistent'
+    _skipNextPaintApply = true
+    return
+  }
+  if (paintMode.value === 'single') { exitPaintMode(); return }
+
+  capturedFormat.value = captureFormat()
+  enterPaintMode('single')
+}
+
+function captureFormat() {
+  const e = props.editor
+  return {
+    bold:      e.isActive('bold'),
+    italic:    e.isActive('italic'),
+    strike:    e.isActive('strike'),
+    fontSize:  e.getAttributes('textStyle').fontSize || null,
+    color:     e.getAttributes('textStyle').color || null,
+    highlight: e.isActive('highlight') ? e.getAttributes('highlight').color : null,
+  }
+}
+
+function enterPaintMode(mode) {
+  paintMode.value = mode
+  if (clearMode.value) exitClearMode()
+  props.editor.view.dom.classList.add('paint-mode')
+  _skipNextPaintApply = true
+  document.addEventListener('mouseup', onPaintMouseup)
+  document.addEventListener('keydown', onPaintKeydown)
+}
+
+function exitPaintMode() {
+  paintMode.value = null
+  capturedFormat.value = null
+  props.editor?.view.dom.classList.remove('paint-mode')
+  document.removeEventListener('mouseup', onPaintMouseup)
+  document.removeEventListener('keydown', onPaintKeydown)
+}
+
+function onPaintMouseup() {
+  if (!paintMode.value) return
+  if (_skipNextPaintApply) { _skipNextPaintApply = false; return }
+  const { from, to } = props.editor.state.selection
+  if (from === to) return
+  applyStoredFormat()
+  if (paintMode.value === 'single') exitPaintMode()
+}
+
+function onPaintKeydown(e) {
+  if (e.key === 'Escape') exitPaintMode()
+}
+
+function applyStoredFormat() {
+  const fmt = capturedFormat.value
+  if (!fmt) return
+  const chain = props.editor.chain().focus()
+  fmt.bold    ? chain.setBold()    : chain.unsetBold()
+  fmt.italic  ? chain.setItalic()  : chain.unsetItalic()
+  fmt.strike  ? chain.setStrike()  : chain.unsetStrike()
+  fmt.fontSize ? chain.setFontSize(parseInt(fmt.fontSize)) : chain.unsetFontSize()
+  fmt.color    ? chain.setColor(fmt.color)                 : chain.unsetColor()
+  fmt.highlight ? chain.setHighlight({ color: fmt.highlight }) : chain.unsetHighlight()
+  chain.run()
+}
+
+// ─── 拼写检查 ──────────────────────────────────────────────────────
+const spellOn = ref(false)
+
+function toggleSpell() {
+  spellOn.value = !spellOn.value
+  const dom = props.editor?.view?.dom
+  if (!dom) return
+  if (spellOn.value) {
+    // 先关掉，50ms 后再开并重新聚焦——Chromium 需要两帧之间的间隔才会触发对已有内容的扫描
+    dom.spellcheck = false
+    dom.blur()
+    setTimeout(() => {
+      dom.spellcheck = true
+      dom.focus()
+    }, 50)
+  } else {
+    dom.spellcheck = false
+  }
+}
+
+// ─── 清除格式 ──────────────────────────────────────────────────────
+const clearMode       = ref(null)   // null | 'keep-list' | 'clear-all'
+const clearPersistent = ref(false)
+const pendingClearPersistent = ref(false)
+let lastClearBtnDown = 0
+
+function onClearBtnMousedown(e) {
+  if (clearMode.value !== null) { exitClearMode(); return }
+
+  const now = Date.now()
+  const isDouble = now - lastClearBtnDown < 300
+  lastClearBtnDown = now
+
+  if (openPop.value === 'clear' && isDouble) {
+    pendingClearPersistent.value = true
+    return  // 保持弹窗打开，切换持续标记
+  }
+
+  pendingClearPersistent.value = false
+  togglePop('clear', e)
+}
+
+function startClear(type) {
+  clearMode.value = type
+  clearPersistent.value = pendingClearPersistent.value
+  pendingClearPersistent.value = false
+  openPop.value = null
+  if (paintMode.value) exitPaintMode()
+  props.editor.view.dom.classList.add('paint-mode')
+  document.addEventListener('mouseup', onClearMouseup)
+  document.addEventListener('keydown', onClearKeydown)
+}
+
+function exitClearMode() {
+  clearMode.value = null
+  clearPersistent.value = false
+  pendingClearPersistent.value = false
+  props.editor?.view.dom.classList.remove('paint-mode')
+  document.removeEventListener('mouseup', onClearMouseup)
+  document.removeEventListener('keydown', onClearKeydown)
+}
+
+function onClearMouseup() {
+  if (!clearMode.value) return
+  const { from, to } = props.editor.state.selection
+  if (from === to) return
+  const chain = props.editor.chain().focus()
+  chain.unsetAllMarks()
+  if (clearMode.value === 'clear-all') chain.clearNodes()
+  chain.run()
+  if (!clearPersistent.value) exitClearMode()
+}
+
+function onClearKeydown(e) {
+  if (e.key === 'Escape') exitClearMode()
+}
 
 const rootRef  = ref(null)
 const popupRef = ref(null)
@@ -253,8 +460,19 @@ function onDocMousedown(e) {
   openPop.value = null
 }
 
-onMounted(() => document.addEventListener('mousedown', onDocMousedown))
-onUnmounted(() => document.removeEventListener('mousedown', onDocMousedown))
+onMounted(() => {
+  document.addEventListener('mousedown', onDocMousedown)
+  // 初始化关闭拼写检查，与按钮默认状态一致
+  const dom = props.editor?.view?.dom
+  if (dom) dom.spellcheck = false
+})
+onUnmounted(() => {
+  document.removeEventListener('mousedown', onDocMousedown)
+  exitPaintMode()
+  exitClearMode()
+  // 窗口关闭时关掉拼写检查
+  if (props.editor?.view?.dom) props.editor.view.dom.spellcheck = false
+})
 </script>
 
 <style scoped>
@@ -296,10 +514,44 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocMousedown))
 }
 
 .fmt-pop-wrap { position: relative; }
+
+.fmt-painter { font-size: 12px; }
+.fmt-painter.paint-persistent {
+  background: rgba(255, 180, 0, 0.28);
+  color: #9a6500;
+}
+
+.fmt-clear { font-size: 14px; font-weight: bold; color: #2e9e5b; }
+.fmt-clear:hover { background: rgba(46, 158, 91, 0.15) !important; }
+.fmt-clear.active { background: rgba(46, 158, 91, 0.28) !important; color: #2e9e5b; }
+.fmt-clear.paint-persistent {
+  background: rgba(255, 180, 0, 0.28);
+  color: #9a6500;
+}
+.fmt-spell { color: rgba(60, 50, 80, 0.35); font-size: 14px; font-weight: 500; }
+.fmt-spell.spell-on { color: #e05555; background: rgba(224, 85, 85, 0.12); }
+.fmt-spell.spell-on:hover { background: rgba(224, 85, 85, 0.22) !important; }
 </style>
 
 <!-- 全局样式：弹窗挂到 body，不能用 scoped -->
 <style>
+/* 格式刷模式：编辑器光标变为十字 */
+.ProseMirror.paint-mode,
+.ProseMirror.paint-mode * {
+  cursor: crosshair !important;
+}
+
+/* 清除格式弹窗持续模式提示 */
+.clear-persistent-hint {
+  font-size: 10px;
+  color: #9a6500;
+  background: rgba(255, 180, 0, 0.18);
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
 .fmt-popup {
   background: white;
   border-radius: 8px;

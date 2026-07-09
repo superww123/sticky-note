@@ -1,4 +1,4 @@
-const { ipcMain, clipboard, nativeImage, BrowserWindow } = require('electron')
+const { ipcMain, clipboard, nativeImage, BrowserWindow, shell } = require('electron')
 const state = require('./state')
 const {
   getDailyNote,
@@ -11,7 +11,7 @@ const {
 const { archiveDailyNote } = require('./word/archiver')
 const { migrateOnStartup } = require('./scheduler')
 const { createNoteWindow } = require('./windows/windowManager')
-const { openImagePreviewWindow } = require('./windows/imagePreviewWindow')
+const { openImagePreviewWindow, closeAllImagePreviewWindows } = require('./windows/imagePreviewWindow')
 
 const THEME_COUNT = 5  // 与 renderer/themes.js 保持一致
 let noteColorIdx = 0   // 循环计数器
@@ -196,7 +196,17 @@ function setupIpc(mainWindow, ballWindow) {
     if (win && !win.isDestroyed()) win.close()
   })
 
+  ipcMain.on('preview:close-all', () => {
+    closeAllImagePreviewWindows()
+  })
+
   // ─── 剪贴板 ───────────────────────────────────────────
+
+  // ─── 外部链接 ─────────────────────────────────────────
+
+  ipcMain.on('shell:open-external', (event, url) => {
+    shell.openExternal(url)
+  })
 
   ipcMain.handle('clipboard:write-image', (event, src) => {
     try {

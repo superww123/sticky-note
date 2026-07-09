@@ -41,6 +41,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ─── 剪贴板 ─────────────────────────────────────────────
   copyImageToClipboard: (src) => ipcRenderer.invoke('clipboard:write-image', src),
 
+  // ─── 外部链接 ─────────────────────────────────────────
+  openExternal: (url) => ipcRenderer.send('shell:open-external', url),
+
   // ─── 主进程推送事件 ─────────────────────────────────────
   onOpacityChanged: (callback) => ipcRenderer.on('opacity-changed', (_, value) => callback(value)),
   onDayChanged: (callback) => ipcRenderer.on('day-changed', () => callback()),

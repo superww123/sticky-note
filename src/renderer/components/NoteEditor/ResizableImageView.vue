@@ -64,7 +64,9 @@ function startResize(e) {
 // ─── 长按 vs 短按区分 ─────────────────────────────────
 
 function openPreview() {
-  window.electronAPI?.previewImageFullscreen(props.node.attrs.src)
+  document.dispatchEvent(new CustomEvent('preview-image-request', {
+    detail: { src: props.node.attrs.src }
+  }))
 }
 
 // ─── 右键菜单 & 复制 ─────────────────────────────────
