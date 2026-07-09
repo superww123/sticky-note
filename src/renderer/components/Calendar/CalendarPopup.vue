@@ -21,7 +21,19 @@
         <span class="batch-lbl">打开前</span>
         <div class="batch-stepper">
           <button @mousedown.prevent @click="batchDays = Math.max(1, batchDays - 1)">−</button>
-          <span>{{ batchDays }}</span>
+          <input
+            v-if="batchEditing"
+            ref="batchInputRef"
+            class="batch-days-input"
+            type="number"
+            :value="batchDays"
+            min="1"
+            max="14"
+            @blur="confirmBatchEdit"
+            @keydown.enter="confirmBatchEdit"
+            @keydown.esc="batchEditing = false"
+          />
+          <span v-else class="batch-days-display" @dblclick="startBatchEdit">{{ batchDays }}</span>
           <button @mousedown.prevent @click="batchDays = Math.min(14, batchDays + 1)">＋</button>
         </div>
         <span class="batch-lbl">天</span>
@@ -70,7 +82,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useDailyStore } from '../../stores/dailyStore'
 import { useCalendarStore } from '../../stores/calendarStore'
 
@@ -81,6 +93,21 @@ const calStore = useCalendarStore()
 // ── 批量打开 ──────────────────────────────────────────────
 const batchDays = ref(3)
 const batchLoading = ref(false)
+const batchEditing = ref(false)
+const batchInputRef = ref(null)
+
+function startBatchEdit() {
+  batchEditing.value = true
+  nextTick(() => {
+    batchInputRef.value?.select()
+  })
+}
+
+function confirmBatchEdit(e) {
+  const val = parseInt(e.target.value)
+  if (!isNaN(val)) batchDays.value = Math.max(1, Math.min(14, val))
+  batchEditing.value = false
+}
 
 async function batchOpen() {
   const n = Math.max(1, Math.min(14, batchDays.value || 3))
@@ -241,9 +268,9 @@ onMounted(() => calStore.loadAllMarks())
   flex-shrink: 0;
 }
 
-.batch-stepper button {
+.batch-stepper > button {
   width: 18px;
-  height: 20px;
+  height: 22px;
   background: rgba(155, 142, 196, 0.1);
   border: none;
   cursor: pointer;
@@ -255,16 +282,33 @@ onMounted(() => calStore.loadAllMarks())
   padding: 0;
   line-height: 1;
 }
-.batch-stepper button:hover { background: rgba(155, 142, 196, 0.28); }
+.batch-stepper > button:hover { background: rgba(155, 142, 196, 0.28); }
 
-.batch-stepper span {
-  width: 22px;
+.batch-days-display {
+  width: 24px;
   text-align: center;
   font-size: 12px;
   color: #4a4060;
   font-weight: 500;
   user-select: none;
+  cursor: text;
 }
+
+.batch-days-input {
+  width: 24px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font-size: 12px;
+  color: #4a4060;
+  font-weight: 500;
+  font-family: 'Microsoft YaHei', sans-serif;
+  outline: none;
+  padding: 0;
+}
+.batch-days-input::-webkit-inner-spin-button,
+.batch-days-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
 /* 一键打开按钮 */
 .batch-btn {
