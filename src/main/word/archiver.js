@@ -130,10 +130,27 @@ function nodeToTextRuns(node) {
   if (!node.content) return [new TextRun({ text: '' })]
   for (const child of node.content) {
     if (child.type === 'text') {
+      const marks = child.marks || []
+      const bold      = marks.some(m => m.type === 'bold')
+      const italics   = marks.some(m => m.type === 'italic')
+      const strike    = marks.some(m => m.type === 'strike')
+      const colorMark = marks.find(m => m.type === 'textStyle')
+      const hlMark    = marks.find(m => m.type === 'highlight')
+      const sizeMark  = marks.find(m => m.type === 'textStyle')
+      const color     = colorMark?.attrs?.color?.replace('#', '') || undefined
+      const highlight = hlMark?.attrs?.color?.replace('#', '') || undefined
+      const fontSize  = sizeMark?.attrs?.fontSize
+        ? parseInt(sizeMark.attrs.fontSize) * 2  // docx 单位是半点，px*2 近似
+        : undefined
+
       runs.push(new TextRun({
         text: child.text || '',
-        bold: child.marks?.some(m => m.type === 'bold'),
-        italics: child.marks?.some(m => m.type === 'italic'),
+        bold,
+        italics,
+        strike,
+        ...(color    ? { color }                       : {}),
+        ...(highlight ? { highlight: 'yellow' }        : {}),  // docx highlight 只支持固定色名
+        ...(fontSize  ? { size: fontSize }             : {}),
       }))
     }
   }
@@ -144,20 +161,60 @@ async function imageNodeToDocx(node) {
   const src = node.attrs?.src
   if (!src) return null
 
-  let imageData
+  let imageData, mimeType
   if (src.startsWith('data:')) {
-    imageData = Buffer.from(src.split(',')[1], 'base64')
+    const match = src.match(/^data:(image\/\w+);base64,(.+)/)
+    if (!match) return null
+    mimeType = match[1]
+    imageData = Buffer.from(match[2], 'base64')
   } else if (src.startsWith('file://')) {
-    imageData = fs.readFileSync(src.replace('file://', ''))
+    const filePath = src.replace(/^file:\/\/\/?/, '')
+    imageData = fs.readFileSync(filePath)
+    mimeType = filePath.endsWith('.png') ? 'image/png' : 'image/jpeg'
   } else {
     return null
   }
 
+  // 从二进制数据解析真实宽高
+  const { width: origW, height: origH } = getImageDimensions(imageData, mimeType)
+  const MAX_W = 450
+  const ratio = origW > MAX_W ? MAX_W / origW : 1
+  const width  = Math.round(origW * ratio)
+  const height = Math.round(origH * ratio)
+
+  const typeMap = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'png' }
+  const imgType = typeMap[mimeType] || 'png'
+
   return new Paragraph({
     children: [
-      new ImageRun({ data: imageData, transformation: { width: 400, height: 300 } }),
+      new ImageRun({ data: imageData, transformation: { width, height }, type: imgType }),
     ],
   })
+}
+
+/**
+ * 从 buffer 读取图片真实宽高（支持 PNG / JPEG）
+ */
+function getImageDimensions(buf, mimeType) {
+  try {
+    if (mimeType === 'image/png') {
+      // PNG: 宽高在第 16-24 字节
+      return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) }
+    } else {
+      // JPEG: 扫描 SOF0/SOF2 标记
+      let i = 2
+      while (i < buf.length) {
+        if (buf[i] !== 0xFF) break
+        const marker = buf[i + 1]
+        const segLen = buf.readUInt16BE(i + 2)
+        if ((marker >= 0xC0 && marker <= 0xC3) || (marker >= 0xC5 && marker <= 0xC7)) {
+          return { width: buf.readUInt16BE(i + 7), height: buf.readUInt16BE(i + 5) }
+        }
+        i += 2 + segLen
+      }
+    }
+  } catch {}
+  return { width: 400, height: 300 }  // 解析失败时的兜底值
 }
 
 module.exports = { archiveDailyNote }
