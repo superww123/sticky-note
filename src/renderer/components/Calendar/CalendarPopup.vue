@@ -4,7 +4,14 @@
       <!-- 头部：月份导航 -->
       <div class="cal-header">
         <button @click="prevMonth">‹</button>
-        <span>{{ year }}年{{ month + 1 }}月</span>
+        <div class="cal-title">
+          <select class="title-select" :value="year" @change="onYearChange">
+            <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}年</option>
+          </select>
+          <select class="title-select" :value="month" @change="onMonthChange">
+            <option v-for="(_, i) in 12" :key="i" :value="i">{{ i + 1 }}月</option>
+          </select>
+        </div>
         <button @click="nextMonth">›</button>
         <button class="close-cal" @click="$emit('close')">✕</button>
       </div>
@@ -114,6 +121,16 @@ const year = ref(today.getFullYear())
 const month = ref(today.getMonth())
 const selectedDate = ref('')
 const showOpenDialog = ref(false)
+
+// 年份选项：前5年到后2年
+const yearOptions = computed(() => {
+  const arr = []
+  for (let y = today.getFullYear() - 5; y <= today.getFullYear() + 2; y++) arr.push(y)
+  return arr
+})
+
+function onYearChange(e) { year.value = parseInt(e.target.value) }
+function onMonthChange(e) { month.value = parseInt(e.target.value) }
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 
@@ -266,4 +283,27 @@ onMounted(() => calStore.loadAllMarks())
 }
 .batch-btn:hover { filter: brightness(1.1); }
 .batch-btn:disabled { opacity: 0.6; cursor: not-allowed; filter: none; }
+
+/* ── 年月下拉 ── */
+.cal-title {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.title-select {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a4060;
+  font-family: 'Microsoft YaHei', sans-serif;
+  padding: 2px 3px;
+  border-radius: 5px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.title-select:hover { background: rgba(155, 142, 196, 0.15); }
 </style>
