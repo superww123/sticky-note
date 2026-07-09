@@ -9,6 +9,8 @@ const {
   deleteCalendarMark,
   searchAllNotes,
   getDatesWithContent,
+  saveAlarm,
+  deleteAlarm,
 } = require('./database/db')
 const { archiveDailyNote } = require('./word/archiver')
 const { migrateOnStartup } = require('./scheduler')
@@ -200,6 +202,21 @@ function setupIpc(mainWindow, ballWindow) {
   })
 
   ipcMain.handle('window:get-pin', () => state.isPinned)
+
+  // ─── 闹钟 ─────────────────────────────────────────────
+
+  ipcMain.handle('alarm:save', (event, { todoId, todoText, note, alarmTime }) => {
+    return saveAlarm({ todoId, todoText, note, alarmTime })
+  })
+
+  ipcMain.handle('alarm:delete', (event, todoId) => {
+    return deleteAlarm(todoId)
+  })
+
+  ipcMain.on('alarm:dismiss', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win && !win.isDestroyed()) win.close()
+  })
 
   // ─── 全局搜索 ─────────────────────────────────────────
 

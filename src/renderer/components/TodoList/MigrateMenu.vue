@@ -2,6 +2,10 @@
   <!-- 透明遮罩：点击任意空白处关闭菜单 -->
   <div class="migrate-mask" @mousedown.self="$emit('close')" @contextmenu.prevent="$emit('close')">
     <div class="migrate-menu" :style="menuStyle">
+      <!-- 设置闹钟 -->
+      <button class="migrate-opt alarm-opt" @click="onSetAlarm">⏰ 设置闹钟</button>
+      <div class="migrate-divider"></div>
+
       <div class="migrate-header">迁移至：</div>
 
       <button class="migrate-opt" @click="$emit('select', tomorrowStr)">
@@ -42,12 +46,17 @@
 <script setup>
 import { ref, computed } from 'vue'
 
-defineEmits(['close', 'select'])
+const emit = defineEmits(['close', 'select', 'set-alarm'])
 
 const props = defineProps({
   x: { type: Number, required: true },
   y: { type: Number, required: true },
 })
+
+function onSetAlarm() {
+  emit('set-alarm')
+  emit('close')
+}
 
 const showCal = ref(false)
 
@@ -215,4 +224,13 @@ const cells = computed(() => {
 .mini-cal-cell.out:hover    { background: none; color: #ddd; }
 .mini-cal-cell.today        { background: #9b8ec4; color: white; font-weight: bold; }
 .mini-cal-cell.today:hover  { background: #8a7db8; }
+
+.alarm-opt { color: #7a6eaa; font-weight: 500; }
+.alarm-opt:hover { background: rgba(155, 142, 196, 0.18); }
+
+.migrate-divider {
+  height: 1px;
+  background: rgba(155, 142, 196, 0.2);
+  margin: 2px 6px;
+}
 </style>

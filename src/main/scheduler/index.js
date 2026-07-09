@@ -1,7 +1,8 @@
 const cron = require('node-cron')
 const { Notification } = require('electron')
 const { archiveDailyNote } = require('../word/archiver')
-const { getDailyNote, saveTodos } = require('../database/db')
+const { getDailyNote, saveTodos, getPendingAlarms, markAlarmTriggered } = require('../database/db')
+const { openAlarmAlertWindow } = require('../windows/alarmAlertWindow')
 
 let schedulerWindow = null
 
@@ -38,9 +39,10 @@ function setupScheduler(mainWindow) {
     }
   })
 
-  // 每分钟检查一次截止时间提醒
+  // 每分钟检查一次截止时间提醒和闹钟
   cron.schedule('* * * * *', () => {
     checkDeadlineReminders()
+    checkAlarms()
   })
 
   console.log('[Scheduler] 定时任务已启动')
@@ -171,6 +173,25 @@ function sendDeadlineNotification(todo) {
   }).show()
 
   console.log(`[Scheduler] 发送提醒: ${todo.text}`)
+}
+
+/**
+ * 检查到期闹钟并弹出提醒窗口
+ */
+function checkAlarms() {
+  try {
+    const alarms = getPendingAlarms()
+    for (const alarm of alarms) {
+      markAlarmTriggered(alarm.id)
+      openAlarmAlertWindow({
+        todoText: alarm.todo_text,
+        note: alarm.note,
+        time: alarm.alarm_time,
+      })
+    }
+  } catch (e) {
+    console.error('[Scheduler] checkAlarms 失败:', e.message)
+  }
 }
 
 function getTodayStr() {

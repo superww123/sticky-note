@@ -70,6 +70,19 @@ async function initDatabase() {
     )
   `)
 
+  // 闹钟表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS alarms (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      todo_id TEXT NOT NULL,
+      todo_text TEXT NOT NULL,
+      note TEXT NOT NULL DEFAULT '',
+      alarm_time TEXT NOT NULL,
+      triggered INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    )
+  `)
+
   persist()
   console.log('[DB] 数据库初始化完成:', dbPath)
   return db
@@ -284,6 +297,35 @@ function getDatesWithContent(dates) {
   return rows.map(r => r.date)
 }
 
+// ─── alarms CRUD ────────────────────────────────────────────────
+
+function saveAlarm({ todoId, todoText, note, alarmTime }) {
+  const now = new Date().toISOString()
+  // 同一待办只保留最新一条（先删旧的再插入）
+  run('DELETE FROM alarms WHERE todo_id = ?', [String(todoId)])
+  run(
+    `INSERT INTO alarms (todo_id, todo_text, note, alarm_time, triggered, created_at)
+     VALUES (?, ?, ?, ?, 0, ?)`,
+    [String(todoId), todoText, note || '', alarmTime, now]
+  )
+}
+
+function getPendingAlarms() {
+  return queryAll(
+    `SELECT * FROM alarms
+     WHERE triggered = 0
+       AND alarm_time <= strftime('%Y-%m-%dT%H:%M', 'now', 'localtime')`
+  )
+}
+
+function markAlarmTriggered(id) {
+  run('UPDATE alarms SET triggered = 1 WHERE id = ?', [id])
+}
+
+function deleteAlarm(todoId) {
+  run('DELETE FROM alarms WHERE todo_id = ?', [String(todoId)])
+}
+
 module.exports = {
   initDatabase,
   getDb,
@@ -295,4 +337,8 @@ module.exports = {
   deleteCalendarMark,
   searchAllNotes,
   getDatesWithContent,
+  saveAlarm,
+  getPendingAlarms,
+  markAlarmTriggered,
+  deleteAlarm,
 }

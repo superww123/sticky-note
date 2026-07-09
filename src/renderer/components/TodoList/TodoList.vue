@@ -47,7 +47,20 @@
       :y="migrateMenu.y"
       @close="closeMigrateMenu"
       @select="onMigrateSelect"
+      @set-alarm="onSetAlarm"
     />
+
+    <!-- 闹钟设置浮层 -->
+    <Teleport to="body">
+      <AlarmSetRow
+        v-if="alarmMenu.visible && alarmMenu.todo"
+        :todo="alarmMenu.todo"
+        :x="alarmMenu.x"
+        :y="alarmMenu.y"
+        @saved="alarmMenu.visible = false"
+        @cancel="alarmMenu.visible = false"
+      />
+    </Teleport>
   </div>
 </template>
 
@@ -57,17 +70,20 @@ import { useRoute } from 'vue-router'
 import { useDailyStore } from '../../stores/dailyStore'
 import TodoItem from './TodoItem.vue'
 import MigrateMenu from './MigrateMenu.vue'
+import AlarmSetRow from './AlarmSetRow.vue'
 
 const store = useDailyStore()
 const findKeyword = inject('findKeyword', ref(''))
+
+// 右键迁移菜单状态
+const migrateMenu = reactive({ visible: false, x: 0, y: 0, todoId: null })
+// 闹钟设置浮层状态
+const alarmMenu = reactive({ visible: false, x: 0, y: 0, todo: null })
 const isAdding = ref(false)
 const newTodoText = ref('')
 const inputRef = ref(null)
 let isComposing = false
 let confirming = false
-
-// 右键迁移菜单状态
-const migrateMenu = reactive({ visible: false, x: 0, y: 0, todoId: null })
 
 function openMigrateMenu(todoId, { x, y }) {
   migrateMenu.visible = true
@@ -79,6 +95,19 @@ function openMigrateMenu(todoId, { x, y }) {
 function closeMigrateMenu() {
   migrateMenu.visible = false
   migrateMenu.todoId = null
+}
+
+function onSetAlarm() {
+  const id = migrateMenu.todoId
+  const x = migrateMenu.x
+  const y = migrateMenu.y
+  closeMigrateMenu()
+  const todo = store.todos.find(t => t.id === id)
+  if (!todo) return
+  alarmMenu.todo = todo
+  alarmMenu.x = x
+  alarmMenu.y = y
+  alarmMenu.visible = true
 }
 
 async function onMigrateSelect(targetDate) {

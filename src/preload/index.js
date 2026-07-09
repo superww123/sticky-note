@@ -44,6 +44,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ─── 外部链接 ─────────────────────────────────────────
   openExternal: (url) => ipcRenderer.send('shell:open-external', url),
 
+  // ─── 闹钟 ─────────────────────────────────────────────
+  saveAlarm: (data) => ipcRenderer.invoke('alarm:save', data),
+  deleteAlarm: (todoId) => ipcRenderer.invoke('alarm:delete', todoId),
+
   // ─── 全局搜索 ─────────────────────────────────────────
   searchAllNotes: (keyword) => ipcRenderer.invoke('search:all-notes', keyword),
   onFindKeyword: (cb) => ipcRenderer.on('note:find-keyword', (_, kw) => cb(kw)),
