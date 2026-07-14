@@ -18,7 +18,10 @@
 
     <Transition name="toast">
       <div v-if="toast.visible" class="archive-toast" :class="toast.type">
-        {{ toast.message }}
+        <span>{{ toast.message }}</span>
+        <button v-if="toast.filePath" class="toast-open-btn" @click="openArchiveFile">
+          打开文档
+        </button>
       </div>
     </Transition>
   </div>
@@ -68,17 +71,42 @@ const editor = useEditor({
     },
     handlePaste(view, event) {
       const items = Array.from(event.clipboardData?.items || [])
+
+      // 图片优先处理
       const imageItem = items.find(item => item.type.startsWith('image/'))
       if (imageItem) {
         event.preventDefault()
         const file = imageItem.getAsFile()
         const reader = new FileReader()
         reader.onload = (e) => {
-          editor.value?.chain().focus().setImage({ src: e.target.result }).run()
+          editor.value?.chain()
+            .focus()
+            .setImage({ src: e.target.result })
+            .unsetMark('textStyle')  // 清除颜色/字号等 mark，防止透明色污染后续输入
+            .run()
         }
         reader.readAsDataURL(file)
         return true
       }
+
+      // Tiptap 内部复制（含格式信息），保留格式
+      const pmSlice = event.clipboardData?.getData('application/x-pm-slice')
+      if (pmSlice) return false
+
+      // 外部粘贴（如 VS Code、浏览器）：强制纯文本，去掉颜色/字体等外部格式
+      const hasHtml = items.some(item => item.type === 'text/html')
+      if (hasHtml) {
+        event.preventDefault()
+        const text = event.clipboardData?.getData('text/plain') || ''
+        const lines = text.split('\n')
+        const paragraphs = lines.map(line => (
+          line ? { type: 'paragraph', content: [{ type: 'text', text: line }] }
+               : { type: 'paragraph' }
+        ))
+        editor.value?.chain().focus().insertContent(paragraphs).run()
+        return true
+      }
+
       return false
     },
   },
@@ -94,7 +122,7 @@ const editor = useEditor({
 let saveTimer = null
 let toastTimer = null
 const archiving = ref(false)
-const toast = ref({ visible: false, message: '', type: 'success' })
+const toast = ref({ visible: false, message: '', type: 'success', filePath: null })
 
 onMounted(() => {
   document.addEventListener('preview-image-request', onPreviewImageRequest)
@@ -150,18 +178,25 @@ watch(() => store.noteContent, (newContent) => {
   }
 }, { deep: true })
 
-function showToast(message, type = 'success') {
+function showToast(message, type = 'success', filePath = null) {
   clearTimeout(toastTimer)
-  toast.value = { visible: true, message, type }
-  toastTimer = setTimeout(() => { toast.value.visible = false }, 2500)
+  toast.value = { visible: true, message, type, filePath }
+  toastTimer = setTimeout(() => { toast.value.visible = false }, filePath ? 5000 : 2500)
+}
+
+function openArchiveFile() {
+  if (toast.value.filePath) {
+    window.electronAPI?.openFile(toast.value.filePath)
+    toast.value.visible = false
+  }
 }
 
 async function manualArchive() {
   if (archiving.value) return
   archiving.value = true
   try {
-    await window.electronAPI?.manualArchive(store.currentDate)
-    showToast('✓ 已保存到随心记归档')
+    const result = await window.electronAPI?.manualArchive(store.currentDate)
+    showToast('✓ 已归档', 'success', result?.filePath ?? null)
   } catch (e) {
     showToast('归档失败：' + (e?.message || '未知错误'), 'error')
   } finally {
@@ -189,12 +224,29 @@ onBeforeUnmount(() => {
   right: 10px;
   background: rgba(60, 170, 110, 0.93);
   color: #fff;
-  padding: 6px 16px;
+  padding: 6px 10px 6px 16px;
   border-radius: 10px;
   font-size: 13px;
-  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   backdrop-filter: blur(6px);
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.toast-open-btn {
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: #fff;
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.toast-open-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .archive-toast.error {

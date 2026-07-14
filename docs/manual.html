@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>随心记 · 产品手册</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0e0c1a; --bg2: #1a1630; --card: rgba(255,255,255,0.05);
+  --border: rgba(155,142,196,0.2); --purple: #9b8ec4; --purple-light: #c4b8e8;
+  --text: rgba(255,255,255,0.88); --muted: rgba(255,255,255,0.45);
+  --orange: #e06420; --green: #38b865; --red: #e05555;
+}
+html { scroll-behavior: smooth; }
+body { font-family: 'PingFang SC','Microsoft YaHei',-apple-system,sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+
+/* NAV */
+nav { position: sticky; top: 0; z-index: 100; background: rgba(14,12,26,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 0 clamp(16px,5vw,80px); display: flex; align-items: center; gap: 20px; height: 52px; }
+.nav-logo { font-size: 17px; font-weight: 700; color: var(--purple-light); text-decoration: none; white-space: nowrap; }
+.nav-links { display: flex; gap: 18px; overflow-x: auto; }
+.nav-links a { font-size: 12.5px; color: var(--muted); text-decoration: none; white-space: nowrap; transition: color .2s; }
+.nav-links a:hover { color: var(--purple-light); }
+
+/* HERO */
+.hero { text-align: center; padding: clamp(60px,8vw,100px) 20px clamp(50px,6vw,80px); background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(155,142,196,0.13) 0%, transparent 70%); }
+.hero-icon { width: 80px; height: 80px; margin: 0 auto 20px; background: linear-gradient(135deg,#9b8ec4,#6b5fa0); border-radius: 22px; display: flex; align-items: center; justify-content: center; font-size: 40px; box-shadow: 0 12px 40px rgba(107,95,160,.4); }
+.hero h1 { font-size: clamp(30px,5vw,52px); font-weight: 800; letter-spacing: -1px; margin-bottom: 14px; }
+.hero h1 em { font-style: normal; background: linear-gradient(90deg,#c4b8e8,#9b8ec4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.hero p { font-size: clamp(14px,2vw,17px); color: var(--muted); max-width: 500px; margin: 0 auto 32px; }
+.badges { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; border: 1px solid var(--border); background: var(--card); color: var(--muted); }
+
+/* SECTION */
+section { padding: clamp(40px,5vw,72px) clamp(16px,5vw,80px); border-top: 1px solid var(--border); }
+.sec-label { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--purple); background: rgba(155,142,196,.1); border: 1px solid rgba(155,142,196,.2); padding: 3px 10px; border-radius: 20px; margin-bottom: 12px; }
+h2 { font-size: clamp(20px,3vw,28px); font-weight: 700; margin-bottom: 8px; }
+.sec-desc { font-size: 14px; color: var(--muted); max-width: 600px; margin-bottom: 36px; }
+
+/* FEATURE ROW */
+.feat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; margin-bottom: 40px; }
+.feat-row.reverse { direction: rtl; }
+.feat-row.reverse > * { direction: ltr; }
+@media(max-width:680px){ .feat-row, .feat-row.reverse { grid-template-columns: 1fr; direction: ltr; } }
+.feat-text h3 { font-size: 16px; font-weight: 600; margin-bottom: 10px; }
+.feat-text h3 + h3 { margin-top: 14px; }
+.feat-text ul { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+.feat-text li { font-size: 13px; color: var(--muted); padding-left: 16px; position: relative; line-height: 1.55; }
+.feat-text li::before { content: '·'; position: absolute; left: 4px; color: var(--purple); font-size: 16px; top: -1px; }
+.feat-text li b { color: var(--text); font-weight: 500; }
+
+/* STEPS */
+.steps { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.step { display: flex; gap: 10px; align-items: flex-start; }
+.step-n { width: 20px; height: 20px; border-radius: 50%; background: rgba(155,142,196,.2); color: var(--purple-light); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.step p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.step p b { color: var(--text); }
+
+/* MOCKUP WRAPPER */
+.mockup { background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: flex; justify-content: center; align-items: flex-start; }
+
+/* ═══════════════════════════════════════
+   APP WINDOW CSS MOCKUP
+   ═══════════════════════════════════════ */
+:root {
+  --app-bg: rgba(240,240,248,0.97);
+  --app-sec: rgba(230,230,245,0.6);
+  --app-border: rgba(180,170,210,0.4);
+  --app-text: #333;
+  --app-muted: #888;
+  --app-purple: #9b8ec4;
+  --app-purple-light: #c4b8e8;
+  --app-overdue: #e55;
+}
+
+.app-window {
+  background: var(--app-bg);
+  border-radius: 12px;
+  border: 1px solid var(--app-border);
+  box-shadow: 0 4px 24px rgba(0,0,0,.28);
+  overflow: hidden;
+  font-family: 'Microsoft YaHei','PingFang SC',sans-serif;
+  font-size: 13px;
+  color: var(--app-text);
+  user-select: none;
+}
+
+/* 标题栏：[DateBar] [🔍] [═══slider═══] [↑] [－] [●] [✕] */
+.app-titlebar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--app-border);
+  height: 34px; cursor: move;
+}
+.tb-date { font-size: 12px; color: var(--app-muted); display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.tb-cal-icon { font-size: 13px; }
+.tb-search { width: 20px; height: 20px; border: none; background: rgba(155,142,196,.15); border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+.tb-slider { flex: 1; margin: 0 6px; height: 6px; background: rgba(155,142,196,.25); border-radius: 3px; position: relative; cursor: pointer; }
+.tb-slider-fill { position: absolute; left: 0; top: 0; height: 100%; width: 65%; background: var(--app-purple); border-radius: 3px; }
+.tb-slider-thumb { position: absolute; top: 50%; left: 63%; transform: translate(-50%,-50%); width: 14px; height: 14px; border-radius: 50%; background: white; border: 2px solid var(--app-purple); box-shadow: 0 1px 4px rgba(155,142,196,.5); }
+.tb-controls { display: flex; gap: 6px; flex-shrink: 0; }
+.ctrl { width: 20px; height: 20px; border: none; border-radius: 50%; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; color: rgba(0,0,0,.4); }
+.ctrl-pin { background: rgba(155,142,196,.25); color: var(--app-muted); font-size: 12px; font-weight: bold; }
+.ctrl-pin.pinned { background: #4facf7; color: white; }
+.ctrl-tray { background: #ffbd44; }
+.ctrl-ball { background: #9b8ec4; color: white; font-size: 11px; }
+.ctrl-close { background: #ff6059; }
+
+/* 内容区 */
+.app-content { display: flex; flex-direction: column; padding: 8px; gap: 0; }
+
+/* 分隔线 */
+.split-handle { height: 8px; display: flex; align-items: center; justify-content: center; cursor: ns-resize; flex-shrink: 0; }
+.split-dots { display: block; width: 28px; height: 3px; background: repeating-linear-gradient(to right, var(--app-purple-light) 0, var(--app-purple-light) 3px, transparent 3px, transparent 7px); border-radius: 2px; opacity: .5; }
+
+/* 待办区（上面板）*/
+.todo-section { background: var(--app-sec); border-radius: 8px; padding: 10px; }
+.sec-hdr { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.sec-icon { font-size: 16px; }
+.sec-title { font-size: 13px; font-weight: bold; }
+.sec-hdr-right { margin-left: auto; display: flex; gap: 4px; }
+.icon-btn { width: 22px; height: 22px; background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.icon-btn svg { width: 13px; height: 13px; }
+.alarm-btn-inactive { color: rgba(100,100,100,.4); }
+.alarm-btn-active { color: rgba(230,100,30,1); }
+.export-btn { color: rgba(40,160,80,.85); }
+.todo-list { display: flex; flex-direction: column; gap: 4px; }
+.todo-item { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 6px; }
+.todo-item:hover { background: rgba(155,142,196,.15); }
+.todo-item.overdue-row { background: rgba(220,80,80,.08); }
+.todo-item.done-row .todo-txt { text-decoration: line-through; color: var(--app-muted); }
+.drag-h { color: var(--app-muted); cursor: grab; font-size: 12px; flex-shrink: 0; }
+.todo-cb { background: none; border: none; font-size: 14px; color: var(--app-purple); cursor: pointer; flex-shrink: 0; }
+.todo-txt { flex: 1; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mig-tag { font-size: 10px; color: var(--app-purple); background: var(--app-sec); padding: 1px 4px; border-radius: 3px; flex-shrink: 0; }
+.right-col { flex-shrink: 0; display: flex; align-items: center; }
+.dl-btn { font-size: 11px; color: var(--app-muted); background: none; border: none; cursor: pointer; white-space: nowrap; }
+.dl-txt { font-size: 11px; color: var(--app-muted); white-space: nowrap; }
+.dl-txt.near { color: #f90; font-weight: bold; }
+.dl-txt.late { color: var(--app-overdue); font-weight: bold; }
+.alarm-inline { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; color: rgba(224,100,32,.9); cursor: pointer; white-space: nowrap; }
+.alarm-inline svg { width: 9px; height: 9px; }
+.del-btn { background: none; border: none; cursor: pointer; color: var(--app-muted); font-size: 11px; opacity: 0; flex-shrink: 0; }
+.todo-item:hover .del-btn { opacity: 1; }
+.add-btn { margin-top: 6px; width: 100%; background: none; border: 1px dashed var(--app-border); border-radius: 6px; padding: 4px 8px; cursor: pointer; color: var(--app-muted); font-size: 12px; }
+
+/* 随心记区（下面板）*/
+.note-section { background: var(--app-sec); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; }
+.note-hdr { display: flex; align-items: center; gap: 2px; font-size: 13px; font-weight: bold; margin-bottom: 6px; flex-wrap: nowrap; overflow: hidden; }
+.note-hdr .sec-icon { font-size: 14px; flex-shrink: 0; }
+.note-hdr .sec-title { flex-shrink: 0; margin-right: 3px; font-weight: bold; }
+.fmt-sep { width: 1px; height: 12px; background: rgba(155,142,196,.25); margin: 0 1px; flex-shrink: 0; }
+.fmt-btn { width: 20px; height: 20px; background: none; border: none; cursor: pointer; font-size: 10px; font-weight: bold; color: #7a6eaa; border-radius: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.fmt-btn:hover { background: rgba(155,142,196,.2); }
+.fmt-btn-i { font-style: italic; }
+.fmt-btn-s { text-decoration: line-through; }
+.fmt-btn-grn { color: #2e9e5b; font-size: 14px; }
+.fmt-btn-grey { color: rgba(60,50,80,.35); font-size: 14px; }
+.arch-btn { margin-left: auto; background: none; border: none; cursor: pointer; font-size: 14px; opacity: .6; flex-shrink: 0; }
+.note-content { font-size: 13px; color: var(--app-text); line-height: 1.6; flex: 1; overflow-y: auto; padding: 4px; }
+.note-content .nh { font-weight: 700; font-size: 14px; }
+.note-content .nb { font-weight: 700; }
+.note-content .ni { font-style: italic; }
+.note-content .ns { text-decoration: line-through; color: var(--app-muted); }
+.note-content ul { padding-left: 18px; list-style: disc; }
+.note-content ul li { margin: 2px 0; color: var(--app-purple); }
+.note-content ul li span { color: var(--app-text); }
+
+/* 弹出面板 */
+.popup-base { background: rgba(252,251,248,.98); border: 1px solid rgba(200,195,180,.45); border-radius: 12px; box-shadow: 0 8px 28px rgba(0,0,0,.2); padding: 12px; }
+
+/* 闹钟小卡片 */
+.alarm-card { width: 170px; }
+.ac-time { font-size: 11.5px; color: #f5a623; margin-bottom: 4px; cursor: text; }
+.ac-note { font-size: 11px; color: #999; margin-bottom: 7px; font-style: italic; }
+.ac-del { font-size: 10.5px; color: #c0534f; background: none; border: none; cursor: pointer; float: right; }
+
+/* 闹钟总览 */
+.alarm-panel { width: 210px; }
+.panel-title { font-size: 11px; color: #aaa; margin-bottom: 9px; letter-spacing: .4px; }
+.apl-item { background: rgba(0,0,0,.03); border: 1px solid rgba(0,0,0,.06); border-radius: 7px; padding: 7px 9px; margin-bottom: 6px; display: flex; align-items: flex-start; gap: 6px; }
+.apl-left { flex: 1; min-width: 0; }
+.apl-todo { font-size: 11.5px; color: #444; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+.apl-time { font-size: 10.5px; color: #f5a623; }
+.apl-note { font-size: 10.5px; color: #bbb; font-style: italic; }
+.apl-del { color: #ccc; background: none; border: none; cursor: pointer; font-size: 12px; flex-shrink: 0; }
+
+/* 导出面板 */
+.export-panel { width: 220px; }
+.ep-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+.ep-tab { flex: 1; padding: 4px 0; border: 1px solid var(--app-border); border-radius: 6px; font-size: 11px; color: #aaa; background: none; cursor: pointer; text-align: center; }
+.ep-tab.active { background: rgba(56,184,101,.12); border-color: rgba(56,184,101,.4); color: #38b865; font-weight: 600; }
+.ep-preview { background: rgba(0,0,0,.03); border: 1px solid rgba(0,0,0,.06); border-radius: 6px; padding: 8px; font-size: 10.5px; color: #666; line-height: 1.7; max-height: 90px; overflow-y: auto; margin-bottom: 8px; font-family: monospace; white-space: pre; }
+.ep-copy { width: 100%; padding: 6px 0; background: linear-gradient(135deg,#38b865,#2a9e78); border: none; border-radius: 6px; color: white; font-size: 12px; cursor: pointer; }
+
+/* 右键菜单 */
+.ctx-menu { background: white; border: 1px solid rgba(0,0,0,.12); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.18); padding: 4px 0; min-width: 130px; font-size: 12px; }
+.ctx-item { padding: 6px 14px; cursor: pointer; color: #333; }
+.ctx-item:hover { background: rgba(155,142,196,.12); }
+.ctx-item.alarm-item { color: var(--orange); font-weight: 500; }
+.ctx-item.muted { color: #888; font-size: 10.5px; padding: 2px 14px 3px; cursor: default; }
+.ctx-sep { height: 1px; background: rgba(0,0,0,.07); margin: 3px 0; }
+
+/* 闹钟弹窗 */
+.alarm-alert { background: rgba(252,251,248,.97); border-radius: 16px; box-shadow: 0 16px 48px rgba(0,0,0,.3); padding: 20px; width: 250px; margin: 0 auto; text-align: center; border: 1px solid rgba(155,142,196,.3); }
+.aa-header { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 14px; }
+.aa-bell { font-size: 22px; display: inline-block; animation: ring 1.2s ease-in-out infinite; transform-origin: top center; }
+@keyframes ring { 0%,100%{transform:rotate(0)} 15%{transform:rotate(12deg)} 30%{transform:rotate(-10deg)} 45%{transform:rotate(8deg)} 60%{transform:rotate(-6deg)} 75%{transform:rotate(4deg)} }
+.aa-time { font-size: 11px; color: #f5a623; font-weight: 500; }
+.aa-todo { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 10px; line-height: 1.4; }
+.aa-note { background: rgba(155,142,196,.1); border-left: 3px solid var(--app-purple); padding: 6px 10px; border-radius: 0 6px 6px 0; font-size: 11px; color: #666; margin-bottom: 14px; text-align: left; }
+.aa-btn { width: 100%; padding: 8px 0; background: linear-gradient(135deg,#9b8ec4,#7b6ea8); border: none; border-radius: 8px; color: white; font-size: 13px; cursor: pointer; }
+
+/* 小球 */
+.ball-win { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg,#c4b8e8,#9b8ec4); box-shadow: 0 4px 16px rgba(155,142,196,.5); display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; position: relative; }
+.ball-badge { position: absolute; top: -4px; right: -6px; background: #ff6059; color: white; font-size: 10px; font-weight: bold; min-width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
+
+/* 高亮环 */
+.hl { outline: 2px solid #f5a623; outline-offset: 2px; border-radius: 4px; animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{outline-color:#f5a623} 50%{outline-color:rgba(245,166,35,.3)} }
+
+/* 搜索面板 */
+.search-panel { background: rgba(252,251,248,.98); border: 1px solid rgba(200,195,180,.45); border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,.18); padding: 10px; width: 230px; }
+.search-input-row { display: flex; align-items: center; gap: 5px; border: 1px solid rgba(155,142,196,.4); border-radius: 7px; padding: 4px 8px; margin-bottom: 10px; }
+.search-input-row input { border: none; outline: none; font-size: 12px; flex: 1; background: none; }
+.search-result-date { font-size: 10px; color: #aaa; margin-bottom: 4px; }
+.search-result-item { font-size: 12px; color: #444; padding: 3px 6px; background: rgba(0,0,0,.02); border-radius: 4px; margin-bottom: 3px; }
+.search-result-item mark { background: rgba(245,196,35,.4); border-radius: 2px; font-style: normal; }
+
+/* 日历 */
+.calendar-popup-inner { background: white; border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,.18); padding: 14px 16px; width: 230px; }
+.cal-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 13px; font-weight: 600; color: #333; }
+.cal-nav { background: none; border: none; cursor: pointer; font-size: 15px; color: #999; padding: 0 4px; }
+.cal-close { background: none; border: none; cursor: pointer; font-size: 13px; color: #bbb; padding: 0; }
+.cal-range-row { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(0,0,0,.06); }
+.cal-range-label { font-size: 11.5px; color: #666; flex-shrink: 0; }
+.cal-range-btn { width: 20px; height: 20px; border: 1px solid rgba(155,142,196,.4); border-radius: 4px; background: none; cursor: pointer; font-size: 13px; color: var(--app-purple); display: flex; align-items: center; justify-content: center; }
+.cal-range-num { font-size: 12px; color: #444; min-width: 14px; text-align: center; }
+.cal-range-unit { font-size: 11.5px; color: #666; }
+.cal-open-btn { margin-left: auto; background: var(--app-purple); color: white; border: none; border-radius: 6px; padding: 4px 10px; font-size: 11.5px; cursor: pointer; white-space: nowrap; }
+.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+.cal-wd { font-size: 10.5px; color: #bbb; text-align: center; padding: 3px 0; }
+.cal-d { font-size: 11.5px; text-align: center; padding: 5px 0; border-radius: 50%; cursor: pointer; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; color: #333; }
+.cal-d.other-month { color: #ccc; }
+.cal-d:hover { background: rgba(155,142,196,.15); }
+.cal-d.today { background: var(--app-purple); color: white; font-weight: bold; }
+.cal-d.has-dot { position: relative; }
+.cal-d.has-dot::after { content: ''; position: absolute; bottom: 1px; width: 4px; height: 4px; border-radius: 50%; background: var(--app-purple); }
+
+.sec-num { font-size: 10.5px; font-weight: 700; letter-spacing: 1px; color: rgba(155,142,196,.5); margin-bottom: 6px; }
+footer { text-align: center; padding: 36px 20px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="#">📝 随心记</a>
+  <div class="nav-links">
+    <a href="#overview">总览</a>
+    <a href="#window">浮窗</a>
+    <a href="#todo">待办</a>
+    <a href="#deadline">截止时间</a>
+    <a href="#alarm">闹钟</a>
+    <a href="#migrate">迁移</a>
+    <a href="#notes">随心记</a>
+    <a href="#search">搜索</a>
+    <a href="#export">导出</a>
+    <a href="#calendar">历史</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-icon">📝</div>
+  <h1>随<em>心</em>记</h1>
+  <p>始终悬浮在桌面的轻量便签 · 每天一页笔记 · 智能待办 · 闹钟提醒</p>
+  <div class="badges">
+    <span class="badge">Windows 桌面</span>
+    <span class="badge">本地存储</span>
+    <span class="badge">零网络请求</span>
+  </div>
+</div>
+
+<!-- ① 主界面总览 -->
+<section id="overview">
+  <div class="sec-num">OVERVIEW</div>
+  <h2>主界面一览</h2>
+  <p class="sec-desc">随心记是悬浮在桌面的便签窗口。<b>上半部分</b>是今日待办，<b>下半部分</b>是自由书写的随心记笔记区，中间虚线拖动可调整两区高度比例</p>
+
+  <div style="display:flex;justify-content:center;padding: 0 0 8px">
+    <div style="position:relative;width:300px">
+      <div class="app-window" style="width:300px">
+        <!-- 标题栏 -->
+        <div class="app-titlebar">
+          <div class="tb-date"><span class="tb-cal-icon">📅</span>2026/07/15 周二</div>
+          <div class="tb-search">🔍</div>
+          <div class="tb-slider"><div class="tb-slider-fill"></div><div class="tb-slider-thumb"></div></div>
+          <div class="tb-controls">
+            <button class="ctrl ctrl-pin">↑</button>
+            <button class="ctrl ctrl-tray"></button>
+            <button class="ctrl ctrl-ball">●</button>
+            <button class="ctrl ctrl-close"></button>
+          </div>
+        </div>
+        <!-- 内容区 -->
+        <div class="app-content">
+          <!-- 待办面板（上） -->
+          <div class="todo-section">
+            <div class="sec-hdr">
+              <span class="sec-icon">✉️</span>
+              <span class="sec-title">今日待办：</span>
+              <div class="sec-hdr-right">
+                <button class="icon-btn alarm-btn-active">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="9" r="5"/><path d="M8 6v3l2 1"/><path d="M4.5 2.5L2 5M11.5 2.5L14 5"/></svg>
+                </button>
+                <button class="icon-btn export-btn">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 10V3M5 6l3-3 3 3"/><path d="M3 10v3a1 1 0 001 1h8a1 1 0 001-1v-3"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="todo-list">
+              <div class="todo-item">
+                <span class="drag-h">⠿</span><button class="todo-cb">□</button>
+                <span class="todo-txt">OC 后视配接</span>
+                <div class="right-col"><button class="dl-btn">截止时间</button></div>
+              </div>
+              <div class="todo-item">
+                <span class="drag-h">⠿</span><button class="todo-cb">□</button>
+                <span class="todo-txt">OC 侧前配接</span>
+                <span class="mig-tag">↑</span>
+                <div class="right-col"><span class="alarm-inline"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="9" r="5"/><path d="M8 6v3l2 1"/><path d="M4.5 2.5L2 5M11.5 2.5L14 5"/></svg>07-15 14:00</span></div>
+              </div>
+              <div class="todo-item overdue-row">
+                <span class="drag-h">⠿</span><button class="todo-cb">□</button>
+                <span class="todo-txt">找慧明要尺寸链</span>
+                <span class="mig-tag">↑</span>
+                <div class="right-col"><span class="dl-txt late">7/8 16:24</span></div>
+              </div>
+              <div class="todo-item done-row">
+                <span class="drag-h">⠿</span><button class="todo-cb">■</button>
+                <span class="todo-txt">整理W05耐久报告</span>
+              </div>
+            </div>
+            <button class="add-btn">＋ 添加待办</button>
+          </div>
+          <!-- 分隔线 -->
+          <div class="split-handle"><span class="split-dots"></span></div>
+          <!-- 随心记面板（下） -->
+          <div class="note-section">
+            <div class="note-hdr">
+              <span class="sec-icon">📝</span>
+              <span class="sec-title">随心记</span>
+              <button class="fmt-btn"><b>B</b></button>
+              <button class="fmt-btn fmt-btn-i">I</button>
+              <button class="fmt-btn fmt-btn-s">S</button>
+              <div class="fmt-sep"></div>
+              <button class="fmt-btn"><b>A</b></button>
+              <div class="fmt-sep"></div>
+              <button class="fmt-btn">•≡</button>
+              <div class="fmt-sep"></div>
+              <button class="fmt-btn">🎨</button>
+              <div class="fmt-sep"></div>
+              <button class="fmt-btn" style="font-size:12px;transform:rotate(-45deg)">✏️</button>
+              <div class="fmt-sep"></div>
+              <button class="fmt-btn fmt-btn-grn">↺</button>
+              <button class="fmt-btn fmt-btn-grey">？</button>
+              <button class="arch-btn">💾</button>
+            </div>
+            <div class="note-content">
+              <div class="nh">后视配接</div>
+              <div>LCT-65010018 接 <span class="nb">LCT-IF1</span></div>
+              <ul><li><span>确认线束走向</span></li><li><span>周五交报告</span></li></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 标注 -->
+      <div style="position:absolute;top:8px;left:-82px;font-size:11px;color:#f5a623;white-space:nowrap;background:rgba(245,166,35,.15);padding:2px 7px;border-radius:4px">① 标题栏</div>
+      <div style="position:absolute;top:55px;left:-82px;font-size:11px;color:#38b865;white-space:nowrap;background:rgba(56,184,101,.12);padding:2px 7px;border-radius:4px">② 待办区（上）</div>
+      <div style="position:absolute;top:185px;left:-82px;font-size:11px;color:#9b8ec4;white-space:nowrap;background:rgba(155,142,196,.15);padding:2px 7px;border-radius:4px">③ 随心记区（下）</div>
+    </div>
+  </div>
+</section>
+
+<!-- ② 浮窗 -->
+<section id="window">
+  <div class="sec-num">01 · WINDOW</div>
+  <h2>🪟 智能浮窗</h2>
+  <p class="sec-desc">随心记悬浮在所有窗口上方，失焦后缩成屏幕边缘的小球；需要时点击小球立即唤出</p>
+
+  <div class="feat-row">
+    <div class="feat-text">
+      <h3>小球模式</h3>
+      <ul>
+        <li>窗口失焦或点击 <b>● 按钮</b>，主窗口隐藏，屏幕边缘出现紫色小球</li>
+        <li><b>单击小球</b> 唤出完整便签</li>
+        <li><b>拖拽小球</b> 自由调整位置</li>
+        <li>若有<b>逾期待办</b>，小球右上角出现红色数字角标</li>
+      </ul>
+      <h3>📌 置顶</h3>
+      <ul>
+        <li>点击标题栏右侧的 <b>↑ 按钮</b>，按钮变蓝（如图所示）</li>
+        <li>置顶后失焦<b>不会缩成小球</b>，窗口始终可见</li>
+        <li>再次点击取消置顶</li>
+      </ul>
+    </div>
+    <div class="mockup">
+      <div style="display:flex;flex-direction:column;gap:16px;width:100%;align-items:center">
+        <!-- 小球示意 -->
+        <div style="display:flex;align-items:center;gap:16px">
+          <div class="app-window" style="width:120px;opacity:.35">
+            <div class="app-titlebar" style="height:26px">
+              <div class="tb-date" style="font-size:10px">2026/07/15</div>
+              <div class="tb-controls" style="margin-left:auto">
+                <button class="ctrl ctrl-ball" style="width:14px;height:14px;font-size:8px">●</button>
+              </div>
+            </div>
+            <div style="padding:4px 6px;font-size:10px;color:#aaa">便签内容…</div>
+          </div>
+          <div style="font-size:20px;color:var(--muted)">→</div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+            <div class="ball-win">📝<div class="ball-badge">2</div></div>
+            <div style="font-size:10px;color:var(--muted)">点击唤出</div>
+          </div>
+        </div>
+        <!-- 置顶状态 -->
+        <div class="app-window" style="width:240px">
+          <div class="app-titlebar">
+            <div class="tb-date"><span class="tb-cal-icon">📅</span>2026/07/15</div>
+            <div class="tb-search">🔍</div>
+            <div class="tb-slider" style="flex:1;margin:0 6px"><div class="tb-slider-fill"></div><div class="tb-slider-thumb"></div></div>
+            <div class="tb-controls">
+              <button class="ctrl ctrl-pin pinned hl" title="已置顶">↑</button>
+              <button class="ctrl ctrl-tray"></button>
+              <button class="ctrl ctrl-ball">●</button>
+              <button class="ctrl ctrl-close"></button>
+            </div>
+          </div>
+          <div style="padding:6px 8px;font-size:10px;color:#aaa;text-align:center">↑ 蓝色 = 已置顶，失焦不缩小球</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="feat-row reverse" style="margin-bottom:0">
+    <div class="feat-text">
+      <h3>透明度调节</h3>
+      <ul>
+        <li>标题栏中间的 <b>滑块</b> 可实时调整窗口透明度</li>
+        <li>向左拖动变透明，向右拖动变不透明</li>
+        <li>透明度设置自动保存，重启后保持</li>
+      </ul>
+    </div>
+    <div class="mockup">
+      <div class="app-window" style="width:240px">
+        <div class="app-titlebar">
+          <div class="tb-date"><span class="tb-cal-icon">📅</span>2026/07/15</div>
+          <div class="tb-search">🔍</div>
+          <div class="tb-slider hl" style="flex:1;margin:0 6px">
+            <div class="tb-slider-fill" style="width:38%"></div>
+            <div class="tb-slider-thumb" style="left:36%"></div>
+          </div>
+          <div class="tb-controls">
+            <button class="ctrl ctrl-pin">↑</button>
+            <button class="ctrl ctrl-tray"></button>
+            <button class="ctrl ctrl-ball">●</button>
+            <button class="ctrl ctrl-close"></button>
+          </div>
+        </div>
+        <div style="padding:6px 8px;font-size:10px;color:#aaa;text-align:center">拖动滑块调整透明度</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ③ 待办 -->
+<section id="todo">
+  <div class="sec-num">02 · TODO</div>
+  <h2>✅ 待办管理</h2>
+  <p class="sec-desc">每条待办可勾选、双击编辑、拖拽排序，悬停显示删除按钮</p>
+
+  <div class="feat-row">
+    <div class="feat-text">
+      <h3>基础操作</h3>
+      <div class="steps">
+        <div class="step"><div class="step-n">+</div><p>点击底部 <b>＋ 添加待办</b>，输入内容后按回车确认</p></div>
+        <div class="step"><div class="step-n">□</div><p>点击左侧 <b>复选框</b> 标记完成，文字变灰加删除线</p></div>
+        <div class="step"><div class="step-n">✎</div><p><b>双击文字</b> 进入内联编辑，回车或点击其他地方保存</p></div>
+        <div class="step"><div class="step-n">⠿</div><p>拖拽左侧 <b>⠿ 把手</b> 上下移动调整顺序</p></div>
+        <div class="step"><div class="step-n">✕</div><p>悬停待办后，右侧出现 <b>✕</b> 按钮，点击删除</p></div>
+      </div>
+    </div>
+    <div class="mockup">
+      <div class="app-window" style="width:220px">
+        <div class="app-content">
+          <div class="todo-section">
+            <div class="sec-hdr"><span class="sec-icon">✉️</span><span class="sec-title">今日待办：</span></div>
+            <div class="todo-list">
+              <div class="todo-item" style="background:rgba(155,142,196,.1)">
+                <span class="drag-h" style="color:#9b8ec4">⠿</span>
+                <button class="todo-cb">□</button>
+                <span class="todo-txt" style="border-bottom:1.5px solid #9b8ec4">OC 后视配接</span>
+                <button class="del-btn" style="opacity:1">✕</button>
+              </div>
+              <div class="todo-item done-row">
+                <span class="drag-h">⠿</span>
+                <button class="todo-cb">■</button>
+                <span class="todo-txt">整理耐久报告</span>
+              </div>
+            </div>
+            <button class="add-btn">＋ 添加待办</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ④ 截止时间 -->
+<section id="deadline">
+  <div class="sec-num">03 · DEADLINE</div>
+  <h2>🕐 截止时间</h2>
+  <p class="sec-desc">给待办设置截止时间，临近时变黄警告，逾期后变红并高亮整行</p>
+
+  <div class="feat-row">
+    <div class="feat-text">
+      <h3>设置方式</h3>
+      <ul>
+        <li>点击待办右侧的 <b>「截止时间」</b> 文字，弹出时间选择器</li>
+        <li>已设置后点击时间文字可修改</li>
+      </ul>
+      <h3>颜色状态</h3>
+      <ul>
+        <li>距截止 &gt; 3小时：<b style="color:var(--muted)">灰色</b></li>
+        <li>距截止 ≤ 3小时：<b style="color:#f90">黄色加粗</b> 预警</li>
+        <li>已逾期：<b style="color:var(--red)">红色加粗</b>，整行背景变红</li>
+      </ul>
+    </div>
+    <div class="mockup">
+      <div class="app-window" style="width:235px">
+        <div class="app-content">
+          <div class="todo-section">
+            <div class="todo-list">
+              <div class="todo-item">
+                <span class="drag-h">⠿</span><button class="todo-cb">□</button>
+                <span class="todo-txt">后视公差校核</span>
+                <div class="right-col"><button class="dl-btn">截止时间</button></div>
+              </div>
+              <div class="todo-item">
+                <span class="drag-h">⠿</span><button class="todo-cb">□</button>
+                <span class="todo-txt">侧前配接</span>
+                <div class="right-col"><span class="dl-txt near">7/15 17:30</span></div>
+              </div>
+              <div class="todo-item overdue-row">
+                <span class="drag-h">⠿</span><button class="todo-cb">□</button>
+                <span class="todo-txt">找慧明要尺寸链</span>
+                <div class="right-col"><span class="dl-txt late">7/8 16:24</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ⑤ 闹钟 -->
+<section id="alarm">
+  <div class="sec-num">04 · ALARM</div>
+  <h2>⏰ 闹钟提醒</h2>
+  <p class="sec-desc">给待办设置专属闹钟，时间到了全屏置顶弹窗，绝不错过</p>
+
+  <div class="feat-row" style="margin-bottom:32px">
+    <div class="feat-text">
+      <h3>如何设置闹钟</h3>
+      <div class="steps">
+        <div class="step"><div class="step-n">1</div><p><b>右键</b>任意待办，点菜单顶部 <b style="color:#e06420">⏰ 设置闹钟</b></p></div>
+        <div class="step"><div class="step-n">2</div><p>待办条下方展开设置行：选择<b>提醒时间</b>，可选填附加说明</p></div>
+        <div class="step"><div class="step-n">3</div><p>点击 <b>确认</b>，待办右侧出现 <b style="color:#e06420">⏰ 时间</b> 徽标</p></div>
+      </div>
+    </div>
+    <div class="mockup">
+      <div style="display:flex;flex-direction:column;gap:6px;width:100%">
+        <div style="position:relative;display:flex;justify-content:center">
+          <div class="app-window" style="width:196px">
+            <div style="padding:6px 8px">
+              <div class="todo-item" style="background:rgba(155,142,196,.08)">
+                <button class="todo-cb">□</button>
+                <span class="todo-txt">侧后等向威给最新版</span>
+              </div>
+            </div>
+          </div>
+          <div class="ctx-menu" style="position:absolute;top:28px;left:16px;z-index:10">
+            <div class="ctx-item alarm-item">⏰ 设置闹钟</div>
+            <div class="ctx-sep"></div>
+            <div class="ctx-item muted">迁移至</div>
+            <div class="ctx-item">明天</div>
+            <div class="ctx-item">后天</div>
+          </div>
+        </div>
+        <div class="app-window" style="width:100%;margin-top:78px">
+          <div style="padding:6px 8px">
+            <div class="todo-item"><button class="todo-cb">□</button><span class="todo-txt">侧后等向威给最新版</span></div>
+            <div style="background:rgba(155,142,196,.1);border:1px solid rgba(155,142,196,.25);border-radius:8px;padding:9px 10px;margin-top:3px">
+              <div style="font-size:10.5px;color:#777;margin-bottom:3px">提醒时间</div>
+              <div style="border:1px solid rgba(155,142,196,.4);border-radius:5px;padding:4px 7px;font-size:11.5px;color:#555;background:white;margin-bottom:7px">2026-07-15T14:30</div>
+              <div style="font-size:10.5px;color:#777;margin-bottom:3px">附加说明（可选）</div>
+              <div style="border:1px solid rgba(155,142,196,.4);border-radius:5px;padding:4px 7px;font-size:11.5px;color:#aaa;background:white;margin-bottom:7px">记得带图纸</div>
+              <div style="display:flex;gap:6px;justify-content:flex-end">
+                <button style="background:none;border:1px solid var(--app-border);border-radius:5px;color:#999;font-size:11.5px;padding:3px 10px;cursor:pointer">取消</button>
+                <button style="background:linear-gradient(135deg,#9b8ec4,#7b6ea8);border:none;border-radius:5px;color:white;font-size:11.5px;padding:3px 10px;cursor:pointer">确认</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 闹钟徽标 -->
+  <div class="feat-row reverse" style="margin-bottom:32px">
+    <div class="feat-text">
+      <h3>闹钟徽标</h3>
+      <ul>
+        <li>设置后，待办右侧显示 <b style="color:#e06420">⏰ MM-DD HH:mm</b></li>
+        <li><b>单击徽标</b>：弹出小卡片，显示完整时间和说明</li>
+        <li>卡片内 <b>双击时间</b> 可修改提醒时间</li>
+        <li>卡片内 <b>双击说明</b> 可修改附加说明</li>
+        <li>卡片底部 <b>取消闹钟</b> 删除提醒</li>
+      </ul>
+    </div>
+    <div class="mockup">
+      <div style="position:relative;width:230px">
+        <div class="app-window" style="width:230px">
+          <div class="app-content">
+            <div class="todo-section">
+              <div class="todo-item" style="background:rgba(155,142,196,.1)">
+                <span class="drag-h">⠿</span><button class="todo-cb">□</button>
+                <span class="todo-txt">侧后等向威给最新版</span>
+                <span class="mig-tag">↑</span>
+                <div class="right-col"><span class="alarm-inline hl">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="9" r="5"/><path d="M8 6v3l2 1"/><path d="M4.5 2.5L2 5M11.5 2.5L14 5"/></svg>
+                  07-15 14:30
+                </span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="popup-base alarm-card" style="position:absolute;top:50px;right:2px;z-index:10">
+          <div class="ac-time">⏰ 07-15 14:30 <span style="font-size:9px;color:#ccc">双击修改</span></div>
+          <div class="ac-note">记得带图纸 <span style="font-size:9px;color:#ccc">双击修改</span></div>
+          <button class="ac-del">取消闹钟</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 闹钟总览 -->
+  <div class="feat-row" style="margin-bottom:32px">
+    <div class="feat-text">
+      <h3>闹钟总览面板</h3>
+      <ul>
+        <li>点击待办区顶部的 <b style="color:#e06420">⏰（橙色）图标</b>，打开总览</li>
+        <li>显示所有待触发的闹钟，按时间排序</li>
+        <li>双击面板中的<b>时间</b>或<b>说明</b>可直接修改</li>
+        <li>点击 ✕ 取消某条闹钟</li>
+      </ul>
+    </div>
+    <div class="mockup">
+      <div style="position:relative;width:240px">
+        <div class="app-window" style="width:240px">
+          <div class="app-content">
+            <div class="todo-section">
+              <div class="sec-hdr">
+                <span class="sec-icon">✉️</span>
+                <span class="sec-title">今日待办：</span>
+                <div class="sec-hdr-right">
+                  <button class="icon-btn alarm-btn-active hl">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="9" r="5"/><path d="M8 6v3l2 1"/><path d="M4.5 2.5L2 5M11.5 2.5L14 5"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="popup-base alarm-panel" style="position:absolute;top:50px;right:4px;z-index:10">
+          <div class="panel-title">闹钟提醒</div>
+          <div class="apl-item">
+            <div class="apl-left">
+              <div class="apl-todo">OC 侧前配接</div>
+              <div class="apl-time">⏰ 07-15 09:00 <span style="font-size:9px;color:#ccc">双击修改</span></div>
+              <div class="apl-note">早会前确认</div>
+            </div>
+            <button class="apl-del">✕</button>
+          </div>
+          <div class="apl-item">
+            <div class="apl-left">
+              <div class="apl-todo">侧后等向威给最新版</div>
+              <div class="apl-time">⏰ 07-15 14:30</div>
+            </div>
+            <button class="apl-del">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗提醒 -->
+  <div class="feat-row reverse" style="margin-bottom:0">
+    <div class="feat-text">
+      <h3>到时间全屏弹窗</h3>
+      <ul>
+        <li>到点后屏幕<b>正中弹出独立窗口</b>，全局置顶</li>
+        <li>铃铛摇摆动画 + 待办文字（大字）+ 附加说明</li>
+        <li>点击 <b>「知道了」</b> 手动关闭</li>
+        <li>应用关机期间到期的闹钟，<b>重启后立即触发</b></li>
+      </ul>
+    </div>
+    <div class="mockup">
+      <div class="alarm-alert">
+        <div class="aa-header">
+          <span class="aa-bell">🔔</span>
+          <span class="aa-time">07-15 14:30</span>
+        </div>
+        <div class="aa-todo">侧后等向威给最新版</div>
+        <div class="aa-note">记得带图纸，确认尺寸链</div>
+        <button class="aa-btn">知道了</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ⑥ 迁移 -->
+<section id="migrate">
+  <div class="sec-num">05 · MIGRATE</div>
+  <h2>↑ 待办迁移</h2>
+  <p class="sec-desc">未完成的待办可以手动或自动迁移到其他日期，迁移后右侧显示 ↑ 紫色标记</p>
+
+  <div class="feat-row">
+    <div class="feat-text">
+      <h3>手动迁移</h3>
+      <div class="steps">
+        <div class="step"><div class="step-n">1</div><p><b>右键</b>任意待办，菜单下半部分选择目标日期</p></div>
+        <div class="step"><div class="step-n">2</div><p>待办出现在目标日期列表顶部，带 <b style="color:var(--purple-light)">↑</b> 标记</p></div>
+        <div class="step"><div class="step-n">⏰</div><p>若该待办有闹钟，<b>闹钟同步转移</b>到新条目</p></div>
+      </div>
+      <h3>自动迁移</h3>
+      <ul>
+        <li>每天 <b>00:01</b> 自动将昨天未完成的待办迁移到今天</li>
+        <li>应用关机跨越多天，重启时自动<b>扫描过去 30 天</b>补迁</li>
+        <li>已手动删除的条目不会被重新迁移</li>
+      </ul>
+    </div>
+    <div class="mockup">
+      <div style="position:relative;width:200px">
+        <div class="app-window" style="width:200px">
+          <div class="app-content">
+            <div class="todo-section">
+              <div class="todo-item" style="background:rgba(155,142,196,.08)">
+                <span class="drag-h">⠿</span><button class="todo-cb">□</button>
+                <span class="todo-txt">OC 后视配接</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ctx-menu" style="position:absolute;top:36px;left:16px;z-index:10">
+          <div class="ctx-item alarm-item">⏰ 设置闹钟</div>
+          <div class="ctx-sep"></div>
+          <div class="ctx-item muted">迁移至</div>
+          <div class="ctx-item" style="background:rgba(155,142,196,.1);font-weight:500">明天</div>
+          <div class="ctx-item">后天</div>
+          <div class="ctx-item">下周一</div>
+          <div class="ctx-item">自定义…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ⑦ 随心记 -->
+<section id="notes">
+  <div class="sec-num">06 · NOTES</div>
+  <h2>📝 随心记笔记</h2>
+  <p class="sec-desc">窗口下半部分是自由书写的富文本区，支持标题、加粗、颜色、列表等完整格式化功能</p>
+
+  <div class="feat-row">
+    <div class="feat-text">
+      <h3>格式工具栏</h3>
+      <ul>
+        <li><b>B / I / S</b>：加粗、斜体、删除线</li>
+        <li><b>A</b>：字号调整（放大 / 缩小）</li>
+        <li><b>•≡</b>：圆点列表 / 数字编号列表</li>
+        <li><b>🎨</b>：字体颜色 + 荧光高亮</li>
+        <li><b>✏️</b>：格式刷（单击刷一次，双击持续刷）</li>
+        <li><b>↺</b>：清除格式（保留列表 / 全部取消）</li>
+        <li><b>？</b>：开关拼写检查</li>
+        <li><b>💾</b>：立即归档到 Word 文档</li>
+      </ul>
+      <h3>有序列表编号</h3>
+      <ul>
+        <li>点击编号（1. 2. 3.）弹出菜单，可<b>双击修改起始数字</b></li>
+      </ul>
+      <h3>右键复制</h3>
+      <ul>
+        <li>选中文字后<b>右键</b>，弹出「复制 / 粘贴 / 全选」菜单</li>
+      </ul>
+    </div>
+    <div class="mockup">
+      <div class="app-window" style="width:260px">
+        <div class="app-content">
+          <div class="todo-section" style="padding:8px">
+            <div style="font-size:10px;color:#aaa;text-align:center;padding:2px 0">待办区（上半部分）</div>
+          </div>
+          <div class="split-handle"><span class="split-dots"></span></div>
+          <div class="note-section">
+            <div class="note-hdr">
+              <span class="sec-icon">📝</span>
+              <span class="sec-title">随心记</span>
+              <button class="fmt-btn"><b>B</b></button>
+              <button class="fmt-btn fmt-btn-i">I</button>
+              <button class="fmt-btn fmt-btn-s">S</button>
+              <div class="fmt-sep"></div>
+              <button class="fmt-btn"><b>A</b></button>
+              <div class="fmt-sep"></div>
+              <button class="fmt-btn">•≡</button>
+              <div class="fmt-sep"></div>
+              <button class="fmt-btn">🎨</button>
+              <div class="fmt-sep"></div>
+              <button class="fmt-btn" style="font-size:11px;transform:rotate(-45deg)">✏️</button>
+              <div class="fmt-sep"></div>
+              <button class="fmt-btn fmt-btn-grn">↺</button>
+              <button class="fmt-btn fmt-btn-grey">？</button>
+              <button class="arch-btn">💾</button>
+            </div>
+            <div class="note-content" style="position:relative">
+              <div class="nh" style="font-size:14px;margin-bottom:2px">后视配接</div>
+              <div>LCT-65010018 接 <span class="nb">LCT-IF1</span></div>
+              <ul style="margin:3px 0">
+                <li><span>确认线束走向</span></li>
+                <li><span style="text-decoration:line-through;color:#aaa">已完成-校核</span></li>
+              </ul>
+              <div style="margin-top:4px">侧前：<span style="background:rgba(155,142,196,.3)">LCT-65010014</span></div>
+              <div class="ctx-menu" style="position:absolute;top:62px;left:80px;z-index:10;font-size:11px">
+                <div class="ctx-item" style="font-size:11px;color:#333">复制</div>
+                <div class="ctx-sep"></div>
+                <div class="ctx-item" style="font-size:11px">粘贴</div>
+                <div class="ctx-item" style="font-size:11px">全选</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ⑧ 搜索 -->
+<section id="search">
+  <div class="sec-num">07 · SEARCH</div>
+  <h2>🔍 全局搜索</h2>
+  <p class="sec-desc">点击标题栏搜索按钮，实时检索所有历史日期的待办和笔记，关键词黄色高亮</p>
+
+  <div class="feat-row">
+    <div class="feat-text">
+      <h3>使用方法</h3>
+      <div class="steps">
+        <div class="step"><div class="step-n">1</div><p>点击标题栏的 <b>🔍 搜索按钮</b>（在日期右边）</p></div>
+        <div class="step"><div class="step-n">2</div><p>输入关键词，结果按<b>日期分组</b>实时出现</p></div>
+        <div class="step"><div class="step-n">3</div><p>匹配文字<b>黄色高亮</b>，点击结果跳转到该日期</p></div>
+      </div>
+    </div>
+    <div class="mockup">
+      <div class="app-window" style="width:240px">
+        <div class="app-titlebar">
+          <div class="tb-date"><span class="tb-cal-icon">📅</span>2026/07/15</div>
+          <div class="tb-search hl">🔍</div>
+          <div class="tb-slider" style="flex:1;margin:0 6px"><div class="tb-slider-fill"></div><div class="tb-slider-thumb"></div></div>
+          <div class="tb-controls">
+            <button class="ctrl ctrl-pin">↑</button>
+            <button class="ctrl ctrl-tray"></button>
+            <button class="ctrl ctrl-ball">●</button>
+            <button class="ctrl ctrl-close"></button>
+          </div>
+        </div>
+        <div style="padding:8px">
+          <div class="search-panel">
+            <div class="search-input-row">
+              <span style="font-size:10px;color:#aaa">🔍</span>
+              <input type="text" value="LCT-650" style="font-size:12px;color:#555;flex:1;border:none;outline:none;background:none">
+            </div>
+            <div class="search-result-date">2026/07/14</div>
+            <div class="search-result-item"><mark>LCT-650</mark>10018 接 LCT-IF1</div>
+            <div class="search-result-item">□ OC <mark>LCT-650</mark>10014 配接</div>
+            <div class="search-result-date" style="margin-top:6px">2026/07/13</div>
+            <div class="search-result-item">□ <mark>LCT-650</mark>10015 验证</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ⑨ 导出 -->
+<section id="export">
+  <div class="sec-num">08 · EXPORT</div>
+  <h2>📤 导出待办</h2>
+  <p class="sec-desc">将待办列表导出为纯文本格式，方便粘贴到日报、邮件或群聊</p>
+
+  <div class="feat-row">
+    <div class="feat-text">
+      <h3>使用方法</h3>
+      <div class="steps">
+        <div class="step"><div class="step-n">1</div><p>点击待办区顶部的 <b style="color:#38b865">↑ 导出图标</b>（绿色）</p></div>
+        <div class="step"><div class="step-n">2</div><p>选择模式：<b>当天</b> / <b>自定义范围</b> / <b>去重</b></p></div>
+        <div class="step"><div class="step-n">3</div><p>预览文本后点击 <b>「复制文本」</b> 一键复制</p></div>
+      </div>
+      <h3>「去重」模式</h3>
+      <ul>
+        <li>多天迁移的同一条任务在导出结果中<b>只出现一次</b></li>
+      </ul>
+    </div>
+    <div class="mockup">
+      <div style="position:relative;width:235px">
+        <div class="app-window" style="width:235px">
+          <div class="app-content">
+            <div class="todo-section" style="padding:8px">
+              <div class="sec-hdr">
+                <span class="sec-icon">✉️</span><span class="sec-title">今日待办：</span>
+                <div class="sec-hdr-right">
+                  <button class="icon-btn alarm-btn-inactive"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="9" r="5"/><path d="M8 6v3l2 1"/><path d="M4.5 2.5L2 5M11.5 2.5L14 5"/></svg></button>
+                  <button class="icon-btn export-btn hl"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 10V3M5 6l3-3 3 3"/><path d="M3 10v3a1 1 0 001 1h8a1 1 0 001-1v-3"/></svg></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="popup-base export-panel" style="position:absolute;top:48px;right:4px;z-index:10">
+          <div class="panel-title">导出待办</div>
+          <div class="ep-tabs">
+            <button class="ep-tab active">当天</button>
+            <button class="ep-tab">自定义</button>
+            <button class="ep-tab">去重</button>
+          </div>
+          <div class="ep-preview">【26/07/15】
+□ OC 后视配接
+□ OC 侧前配接
+  截止：07-15 06:00 ⚠逾期
+□ 侧后等向威给最新版
+■ 整理W05耐久报告（已完成）</div>
+          <button class="ep-copy">复制文本</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ⑩ 历史 -->
+<section id="calendar">
+  <div class="sec-num">09 · HISTORY</div>
+  <h2>📅 历史日期</h2>
+  <p class="sec-desc">点击标题栏日历图标，查看并跳转到任意历史日期的待办和笔记；也可一键批量打开最近 N 天</p>
+
+  <div class="feat-row">
+    <div class="feat-text">
+      <h3>日历导航</h3>
+      <ul>
+        <li>点击标题栏左侧的 <b>📅 图标</b>，弹出月历</li>
+        <li>有内容的日期显示<b>紫色圆点</b></li>
+        <li>点击某一天跳转查看当天内容，点 <b>‹ ›</b> 切换月份</li>
+      </ul>
+      <h3>一键打开近 N 天</h3>
+      <ul>
+        <li>顶部「打开前 <b>－ 3 ＋ 天</b>」可调整天数</li>
+        <li>点击 <b>「一键打开」</b>，自动从最近 N 天中找到<b>有内容的日期</b>依次打开</li>
+        <li>适合快速回顾近几天的工作进展</li>
+      </ul>
+      <h3>每日归档</h3>
+      <ul>
+        <li>每天 <b>18:00</b> 自动将随心记内容归档到本地 Word 文档</li>
+        <li>也可点击随心记区右上角的 <b>💾</b> 立即归档</li>
+      </ul>
+    </div>
+    <div class="mockup">
+      <div style="display:flex;justify-content:center;width:100%">
+        <div class="calendar-popup-inner">
+          <!-- 标题行 -->
+          <div class="cal-hdr">
+            <button class="cal-nav">‹</button>
+            <span>2026年 7月</span>
+            <button class="cal-nav">›</button>
+            <button class="cal-close">✕</button>
+          </div>
+          <!-- 打开前N天 -->
+          <div class="cal-range-row">
+            <span class="cal-range-label">打开前</span>
+            <button class="cal-range-btn">－</button>
+            <span class="cal-range-num">3</span>
+            <button class="cal-range-btn">＋</button>
+            <span class="cal-range-unit">天</span>
+            <button class="cal-open-btn">一键打开</button>
+          </div>
+          <!-- 星期头 -->
+          <div class="cal-grid">
+            <div class="cal-wd">日</div><div class="cal-wd">一</div><div class="cal-wd">二</div>
+            <div class="cal-wd">三</div><div class="cal-wd">四</div><div class="cal-wd">五</div><div class="cal-wd">六</div>
+            <!-- 上月 -->
+            <div class="cal-d other-month">28</div><div class="cal-d other-month">29</div><div class="cal-d other-month">30</div>
+            <div class="cal-d">1</div><div class="cal-d">2</div><div class="cal-d">3</div><div class="cal-d">4</div>
+            <div class="cal-d">5</div><div class="cal-d">6</div><div class="cal-d">7</div>
+            <div class="cal-d">8</div><div class="cal-d has-dot">9</div><div class="cal-d has-dot">10</div><div class="cal-d">11</div>
+            <div class="cal-d">12</div><div class="cal-d">13</div><div class="cal-d today">14</div>
+            <div class="cal-d">15</div><div class="cal-d">16</div><div class="cal-d">17</div><div class="cal-d">18</div>
+            <div class="cal-d">19</div><div class="cal-d">20</div><div class="cal-d">21</div>
+            <div class="cal-d">22</div><div class="cal-d">23</div><div class="cal-d">24</div><div class="cal-d">25</div>
+            <div class="cal-d">26</div><div class="cal-d">27</div><div class="cal-d">28</div>
+            <div class="cal-d">29</div><div class="cal-d">30</div><div class="cal-d">31</div>
+            <!-- 下月 -->
+            <div class="cal-d other-month">1</div>
+            <div class="cal-d other-month">2</div><div class="cal-d other-month">3</div><div class="cal-d other-month">4</div>
+            <div class="cal-d other-month">5</div><div class="cal-d other-month">6</div><div class="cal-d other-month">7</div><div class="cal-d other-month">8</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>随心记 · 轻量浮层便签</p>
+  <p style="margin-top:6px;font-size:12px">让记录回归本质，让提醒随手可达</p>
+</footer>
+
+</body>
+</html>

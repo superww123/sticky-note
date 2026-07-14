@@ -2,5 +2,21 @@ node_modules/
 dist/
 release/
 logs/
+out/
 *.db
 .archive-history.json
+
+# 临时解压的 Electron 二进制及压缩包
+electron-*/
+electron-*.zip
+electron-v*.zip
+
+# 测试文件
+test-electron/
+test-main*.js
+test-main*.mjs
+test-stderr.txt
+
+# 系统文件
+.DS_Store
+Thumbs.db

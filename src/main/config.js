@@ -27,4 +27,4 @@ function setArchiveDir(dir) {
   writeConfig({ archiveDir: dir })
 }
 
-module.exports = { getArchiveDir, setArchiveDir }
+module.exports = { getArchiveDir, setArchiveDir, readConfig, writeConfig }

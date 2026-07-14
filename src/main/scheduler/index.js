@@ -1,7 +1,7 @@
 const cron = require('node-cron')
 const { Notification } = require('electron')
 const { archiveDailyNote } = require('../word/archiver')
-const { getDailyNote, saveTodos, getPendingAlarms, markAlarmTriggered } = require('../database/db')
+const { getDailyNote, saveTodos, getPendingAlarms, markAlarmTriggered, getDeletedOriginalIds, moveAlarm } = require('../database/db')
 const { openAlarmAlertWindow } = require('../windows/alarmAlertWindow')
 
 let schedulerWindow = null
@@ -56,6 +56,7 @@ function migrateOnStartup() {
   const today = getTodayStr()
   const todayData = getDailyNote(today)
   const todayTodos = todayData ? todayData.todos : []
+  const deletedIds = getDeletedOriginalIds()
 
   // 收集今天已有的 originalId（含今天自己新建的条目，其 originalId = id）
   const existingOriginalIds = new Set(
@@ -71,6 +72,7 @@ function migrateOnStartup() {
 
     for (const todo of data.todos) {
       const origId = String(todo.originalId || todo.id)
+      if (deletedIds.has(origId)) continue  // 用户已手动删除，不再迁移
       if (todo.completed) {
         existingOriginalIds.add(origId)  // 已完成的也占位，防止同 origId 的旧版本被重新迁移
         continue
@@ -78,12 +80,14 @@ function migrateOnStartup() {
       if (existingOriginalIds.has(origId)) continue
 
       existingOriginalIds.add(origId)
-      toAdd.push({
+      const newTodo = {
         ...todo,
         id: Date.now() + Math.random(),
         originalId: origId,
         migratedFrom: date,
-      })
+      }
+      moveAlarm(String(todo.id), String(newTodo.id), newTodo.text)
+      toAdd.push(newTodo)
     }
   }
 
@@ -103,7 +107,8 @@ function migratePendingTodos() {
   const yesterdayData = getDailyNote(yesterday)
   if (!yesterdayData) return
 
-  const pending = yesterdayData.todos.filter(t => !t.completed)
+  const deletedIds = getDeletedOriginalIds()
+  const pending = yesterdayData.todos.filter(t => !t.completed && !deletedIds.has(String(t.originalId || t.id)))
   if (pending.length === 0) return
 
   const todayData = getDailyNote(today)
@@ -114,12 +119,16 @@ function migratePendingTodos() {
 
   const toMigrate = pending
     .filter(t => !existingOriginalIds.has(String(t.originalId || t.id)))
-    .map(t => ({
-      ...t,
-      id: Date.now() + Math.random(),
-      originalId: String(t.originalId || t.id),
-      migratedFrom: yesterday,
-    }))
+    .map(t => {
+      const newTodo = {
+        ...t,
+        id: Date.now() + Math.random(),
+        originalId: String(t.originalId || t.id),
+        migratedFrom: yesterday,
+      }
+      moveAlarm(String(t.id), String(newTodo.id), newTodo.text)
+      return newTodo
+    })
 
   if (toMigrate.length === 0) return
 
@@ -188,6 +197,9 @@ function checkAlarms() {
         note: alarm.note,
         time: alarm.alarm_time,
       })
+    }
+    if (alarms.length > 0 && schedulerWindow && !schedulerWindow.isDestroyed()) {
+      schedulerWindow.webContents.send('alarm:fired')
     }
   } catch (e) {
     console.error('[Scheduler] checkAlarms 失败:', e.message)

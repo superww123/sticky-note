@@ -16,12 +16,34 @@ const { setupScheduler } = require('./scheduler/index')
 const { createMainWindow, createBallWindow } = require('./windows/windowManager')
 const { setupTray } = require('./windows/trayManager')
 const { setupIpc } = require('./ipc')
+const { readConfig } = require('./config')
 
 // 单实例锁，防止多开
 const gotTheLock = app.requestSingleInstanceLock()
 if (!gotTheLock) {
+  // 已有实例在运行：通知它唤出窗口，本实例立即退出
   app.quit()
+  process.exit(0)
 }
+
+// 控制失焦自动变小球的保护期（启动/唤出后短暂禁用，避免窗口刚出现就消失）
+let autoHideEnabled = false
+
+function enableAutoHide() {
+  autoHideEnabled = true
+}
+
+// 第二次启动时（双击图标/快捷键）：把已有窗口从小球/托盘状态唤出
+app.on('second-instance', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  autoHideEnabled = false
+  if (ballWindow && !ballWindow.isDestroyed() && ballWindow.isVisible()) {
+    ballWindow.hide()
+  }
+  mainWindow.show()
+  mainWindow.focus()
+  setTimeout(enableAutoHide, 1500)
+})
 
 // 开发环境热重载
 if (process.env.NODE_ENV === 'development') {
@@ -45,6 +67,13 @@ app.whenReady().then(async () => {
   // 创建主窗口
   mainWindow = createMainWindow()
 
+  // 恢复上次的置顶状态
+  const savedConfig = readConfig()
+  if (savedConfig.isPinned) {
+    state.isPinned = true
+    mainWindow.setAlwaysOnTop(true, 'screen-saver')
+  }
+
   // 创建小球窗口（默认隐藏）
   ballWindow = createBallWindow()
 
@@ -52,6 +81,11 @@ app.whenReady().then(async () => {
   if (startInBallMode) {
     mainWindow.hide()
     ballWindow.show()
+    autoHideEnabled = true  // 小球模式本来就隐藏，直接允许失焦
+  } else {
+    // 正常启动：给窗口 1.5s 保护期，防止启动瞬间失焦导致窗口消失
+    mainWindow.focus()
+    setTimeout(enableAutoHide, 1500)
   }
 
   // 创建系统托盘
@@ -63,20 +97,42 @@ app.whenReady().then(async () => {
   // 注册 IPC 通信
   setupIpc(mainWindow, ballWindow)
 
+  // 右键菜单：选中文字时显示「复制」，可编辑区域额外显示「粘贴/全选」
+  mainWindow.webContents.on('context-menu', (event, params) => {
+    const items = []
+    if (params.selectionText) {
+      items.push({ label: '复制', role: 'copy' })
+    }
+    if (params.isEditable) {
+      if (items.length) items.push({ type: 'separator' })
+      items.push({ label: '粘贴', role: 'paste' })
+      items.push({ label: '全选', role: 'selectAll' })
+    }
+    if (items.length) Menu.buildFromTemplate(items).popup({ window: mainWindow })
+  })
+
   // 失焦自动变小球：焦点转到 app 外部时隐藏主窗口、显示小球
   // 钉住模式或焦点在 app 内部窗口间切换时不触发
   mainWindow.on('blur', () => {
+    if (!autoHideEnabled) return  // 启动/唤出保护期内不触发
     if (state.isPinned) return  // 钉住时始终保持可见
     if (mainWindow.isDestroyed() || !mainWindow.isVisible()) return
-    const focused = BrowserWindow.getFocusedWindow()
-    const isAppWindow = focused && BrowserWindow.getAllWindows().includes(focused)
-    if (!isAppWindow) {
-      mainWindow.hide()
-      if (ballWindow && !ballWindow.isDestroyed()) {
-        ballWindow.setAlwaysOnTop(true, 'floating')
-        ballWindow.showInactive()
+    // 延迟 200ms 再判断：datetime-local 等 native 控件会短暂抢走焦点再还回来
+    setTimeout(() => {
+      if (!autoHideEnabled || state.isPinned) return
+      if (mainWindow.isDestroyed() || !mainWindow.isVisible()) return
+      if (mainWindow.isFocused()) return  // 窗口已重新获焦，不隐藏
+      const focused = BrowserWindow.getFocusedWindow()
+      const isAppWindow = focused && BrowserWindow.getAllWindows().includes(focused)
+      if (!isAppWindow) {
+        mainWindow.hide()
+        if (ballWindow && !ballWindow.isDestroyed()) {
+          ballWindow.setAlwaysOnTop(true, 'screen-saver')
+          ballWindow.showInactive()
+          ballWindow.moveTop()
+        }
       }
-    }
+    }, 200)
   })
 
   // 开发模式：全局 F12 打开 DevTools

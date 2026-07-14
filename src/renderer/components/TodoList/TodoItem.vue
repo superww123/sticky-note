@@ -41,30 +41,38 @@
     ></span>
     <span v-if="todo.migratedFrom" class="migrated-tag" title="从昨日迁移">↑</span>
 
-    <!-- 截止时间 -->
-    <div class="deadline-area">
-      <span
-        v-if="todo.deadline"
-        class="deadline-text"
-        :class="{ overdue: isOverdue, 'near-deadline': isNearDeadline }"
-        @click="showDatePicker = true"
-      >
-        {{ formatDeadline(todo.deadline) }}
-      </span>
-      <button v-else class="set-deadline-btn" @click="showDatePicker = true" title="设置截止时间">
-        截止时间
-      </button>
-
-      <!-- 日期时间选择器 -->
-      <input
-        v-if="showDatePicker"
-        ref="datePickerRef"
-        type="datetime-local"
-        class="deadline-picker"
-        :value="todo.deadline ? todo.deadline.slice(0, 16) : ''"
-        @change="onDeadlineChange"
-        @blur="showDatePicker = false"
+    <!-- 右侧列：有闹钟时用「⏰ 时间」替代截止时间 -->
+    <div class="right-col">
+      <TodoAlarmBadge
+        v-if="alarm"
+        :alarm="alarm"
+        @updated="$emit('alarm-updated', todo.id, $event)"
+        @deleted="$emit('alarm-deleted', todo.id)"
       />
+      <div v-else class="deadline-area">
+        <span
+          v-if="todo.deadline"
+          class="deadline-text"
+          :class="{ overdue: isOverdue, 'near-deadline': isNearDeadline }"
+          @click="showDatePicker = true"
+        >
+          {{ formatDeadline(todo.deadline) }}
+        </span>
+        <button v-else class="set-deadline-btn" @click="showDatePicker = true" title="设置截止时间">
+          截止时间
+        </button>
+
+        <!-- 日期时间选择器 -->
+        <input
+          v-if="showDatePicker"
+          ref="datePickerRef"
+          type="datetime-local"
+          class="deadline-picker"
+          :value="todo.deadline ? todo.deadline.slice(0, 16) : ''"
+          @change="onDeadlineChange"
+          @blur="showDatePicker = false"
+        />
+      </div>
     </div>
 
     <!-- 删除按钮 -->
@@ -74,14 +82,16 @@
 
 <script setup>
 import { ref, computed, nextTick, watch } from 'vue'
+import TodoAlarmBadge from './TodoAlarmBadge.vue'
 
 const props = defineProps({
   todo: { type: Object, required: true },
   index: { type: Number, required: true },
   highlightKeyword: { type: String, default: '' },
+  alarm: { type: Object, default: null },
 })
 
-const emit = defineEmits(['toggle', 'delete', 'update-deadline', 'update-text', 'migrate-request', 'dragstart', 'dragover', 'drop'])
+const emit = defineEmits(['toggle', 'delete', 'update-deadline', 'update-text', 'migrate-request', 'dragstart', 'dragover', 'drop', 'alarm-updated', 'alarm-deleted'])
 
 // 搜索高亮
 const highlightedText = computed(() => {

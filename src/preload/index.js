@@ -43,15 +43,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // ─── 外部链接 ─────────────────────────────────────────
   openExternal: (url) => ipcRenderer.send('shell:open-external', url),
+  openFile:     (p)   => ipcRenderer.invoke('shell:open-file', p),
 
   // ─── 闹钟 ─────────────────────────────────────────────
-  saveAlarm: (data) => ipcRenderer.invoke('alarm:save', data),
-  deleteAlarm: (todoId) => ipcRenderer.invoke('alarm:delete', todoId),
+  saveAlarm:          (data)   => ipcRenderer.invoke('alarm:save', data),
+  deleteAlarm:        (todoId) => ipcRenderer.invoke('alarm:delete', todoId),
+  getAllPendingAlarms: ()       => ipcRenderer.invoke('alarm:get-all-pending'),
+  getTodayAlarms:     ()       => ipcRenderer.invoke('alarm:get-today'),
+  updateAlarmTime:    (todoId, newTime) => ipcRenderer.invoke('alarm:update-time', todoId, newTime),
+  updateAlarmNote:    (todoId, newNote) => ipcRenderer.invoke('alarm:update-note', todoId, newNote),
+  moveAlarm:          (fromId, toId, toText) => ipcRenderer.invoke('alarm:move', fromId, toId, toText),
+  syncAlarmText:      (todoId, text) => ipcRenderer.invoke('alarm:sync-text', todoId, text),
+  onAlarmFired:       (cb) => ipcRenderer.on('alarm:fired', cb),
 
   // ─── 全局搜索 ─────────────────────────────────────────
   searchAllNotes: (keyword) => ipcRenderer.invoke('search:all-notes', keyword),
   onFindKeyword: (cb) => ipcRenderer.on('note:find-keyword', (_, kw) => cb(kw)),
   getDatesWithContent: (dates) => ipcRenderer.invoke('data:dates-with-content', dates),
+  getTodosRange:       (from, to) => ipcRenderer.invoke('data:todos-range', { from, to }),
 
   // ─── 主进程推送事件 ─────────────────────────────────────
   onOpacityChanged: (callback) => ipcRenderer.on('opacity-changed', (_, value) => callback(value)),

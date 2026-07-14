@@ -91,13 +91,15 @@ export const useDailyStore = defineStore('daily', () => {
   }
 
   /**
-   * 切换待办完成状态
+   * 切换待办完成状态，完成后自动沉底
    */
   async function toggleTodo(id) {
-    const updated = todos.value.map(t =>
+    const toggled = todos.value.map(t =>
       t.id === id ? { ...t, completed: !t.completed } : t
     )
-    await saveTodos(updated)
+    const incomplete = toggled.filter(t => !t.completed)
+    const complete   = toggled.filter(t => t.completed)
+    await saveTodos([...incomplete, ...complete])
   }
 
   /**
@@ -152,6 +154,7 @@ export const useDailyStore = defineStore('daily', () => {
       }
       const plain = [migratedTodo, ...targetTodos].map(t => ({ ...toRaw(t) }))
       await window.electronAPI?.saveTodos(targetDate, plain)
+      await window.electronAPI?.moveAlarm(String(rawTodo.id), String(migratedTodo.id), migratedTodo.text)
       console.log('[Store] migrateTodo: 写入', targetDate, '成功，共', plain.length, '条')
     } catch (e) {
       console.error('[Store] migrateTodo 失败:', e)

@@ -15,18 +15,36 @@
         <button class="search-close" @mousedown.prevent @click="$emit('close')">✕</button>
       </div>
 
+      <!-- 过滤行 -->
+      <div class="search-filter-row">
+        <label class="filter-item" :class="{ active: filterTodo }">
+          <span class="filter-cb" :class="{ checked: filterTodo }" @click="filterTodo = !filterTodo">
+            <span v-if="filterTodo">✓</span>
+          </span>
+          待办
+        </label>
+        <label class="filter-item" :class="{ active: filterNote }">
+          <span class="filter-cb" :class="{ checked: filterNote }" @click="filterNote = !filterNote">
+            <span v-if="filterNote">✓</span>
+          </span>
+          随心记
+        </label>
+      </div>
+
       <!-- 结果区 -->
       <div v-if="keyword.length >= 2" class="search-results">
         <!-- 加载中 -->
         <div v-if="loading" class="search-status">搜索中…</div>
 
         <!-- 无结果 -->
-        <div v-else-if="!loading && normalResults.length === 0" class="search-status">未找到相关内容</div>
+        <div v-else-if="!loading && filteredResults.length === 0" class="search-status">
+          {{ !filterTodo && !filterNote ? '请至少选择一个类型' : '未找到相关内容' }}
+        </div>
 
         <!-- 结果列表 -->
         <template v-else>
           <div
-            v-for="(item, idx) in normalResults"
+            v-for="(item, idx) in filteredResults"
             :key="idx"
             class="search-result-item"
             :class="{ selected: selectedIndex === idx }"
@@ -62,9 +80,16 @@ const keyword = ref('')
 const results = ref([])
 const loading = ref(false)
 const selectedIndex = ref(-1)
+const filterTodo = ref(true)
+const filterNote = ref(true)
 
 const normalResults = computed(() => results.value.filter(r => r.type !== 'overflow'))
 const hasOverflow = computed(() => results.value.some(r => r.type === 'overflow'))
+const filteredResults = computed(() => normalResults.value.filter(r => {
+  if (r.source === 'todo') return filterTodo.value
+  if (r.source === 'note') return filterNote.value
+  return true
+}))
 
 // 自动聚焦
 onMounted(() => nextTick(() => inputRef.value?.focus()))
@@ -103,7 +128,7 @@ function openResult(item) {
 }
 
 function onKeydown(e) {
-  const len = normalResults.value.length
+  const len = filteredResults.value.length
   if (e.key === 'Escape') { emit('close'); return }
   if (e.key === 'ArrowDown') {
     e.preventDefault()
@@ -112,7 +137,7 @@ function onKeydown(e) {
     e.preventDefault()
     selectedIndex.value = Math.max(selectedIndex.value - 1, 0)
   } else if (e.key === 'Enter') {
-    const target = selectedIndex.value >= 0 ? normalResults.value[selectedIndex.value] : normalResults.value[0]
+    const target = selectedIndex.value >= 0 ? filteredResults.value[selectedIndex.value] : filteredResults.value[0]
     if (target) openResult(target)
   }
 }
@@ -171,6 +196,46 @@ function onKeydown(e) {
   flex-shrink: 0;
 }
 .search-close:hover { color: rgba(60, 50, 80, 0.8); background: rgba(155, 142, 196, 0.15); }
+
+/* ── 过滤行 ── */
+.search-filter-row {
+  display: flex;
+  align-items: center;
+  padding: 5px 12px 6px;
+  gap: 14px;
+  border-bottom: 1px solid rgba(180, 170, 210, 0.18);
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  color: rgba(60, 50, 80, 0.45);
+  user-select: none;
+  transition: color 0.12s;
+}
+.filter-item.active { color: #5a4fa0; }
+
+.filter-cb {
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid rgba(155, 142, 196, 0.6);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: white;
+  background: white;
+  flex-shrink: 0;
+  transition: background 0.12s, border-color 0.12s;
+}
+.filter-cb.checked {
+  background: #9b8cc8;
+  border-color: #9b8cc8;
+}
 
 /* ── 结果区 ── */
 .search-results {

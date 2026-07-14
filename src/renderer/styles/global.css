@@ -129,6 +129,30 @@ html, body, #app {
 .content::-webkit-scrollbar { width: 4px; }
 .content::-webkit-scrollbar-thumb { background: var(--purple-light); border-radius: 2px; }
 
+/* ─── 滚动条自动隐藏（hover 显示） ──────────────────────── */
+.todo-section::-webkit-scrollbar,
+.editor-wrapper::-webkit-scrollbar { width: 4px; }
+
+.todo-section::-webkit-scrollbar-track,
+.editor-wrapper::-webkit-scrollbar-track { background: transparent; }
+
+.todo-section::-webkit-scrollbar-thumb,
+.editor-wrapper::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+  transition: background 0.3s;
+}
+
+.todo-section:hover::-webkit-scrollbar-thumb,
+.editor-wrapper:hover::-webkit-scrollbar-thumb {
+  background: rgba(155, 142, 196, 0.5);
+}
+
+.todo-section::-webkit-scrollbar-thumb:hover,
+.editor-wrapper::-webkit-scrollbar-thumb:hover {
+  background: rgba(155, 142, 196, 0.8);
+}
+
 /* ─── 透明度滑块 ─────────────────────────────────────── */
 
 .opacity-slider-wrap {
@@ -271,6 +295,12 @@ html, body, #app {
   background: var(--bg-section);
   padding: 1px 4px;
   border-radius: 3px;
+}
+
+.right-col {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 .deadline-area {

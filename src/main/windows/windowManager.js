@@ -92,13 +92,16 @@ function createBallWindow() {
     },
   })
 
-  win.setAlwaysOnTop(true, 'floating')
+  win.setAlwaysOnTop(true, 'screen-saver')
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
   const ballHeartbeat = setInterval(() => {
     if (win.isDestroyed()) { clearInterval(ballHeartbeat); return }
-    if (win.isVisible()) { win.setAlwaysOnTop(true, 'floating') }
-  }, 3000)
+    if (win.isVisible()) {
+      win.setAlwaysOnTop(true, 'screen-saver')
+      win.moveTop()
+    }
+  }, 300)
 
   win.on('closed', () => clearInterval(ballHeartbeat))
 

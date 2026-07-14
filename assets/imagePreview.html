@@ -12,46 +12,26 @@
       border-radius: 12px;
     }
     #app {
-      display: flex;
-      flex-direction: column;
       width: 100%;
       height: 100%;
-      background: #1c1c1e;
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+      position: relative;
+      background: transparent;
     }
 
-    /* ── 顶部拖动区 ── */
-    #titlebar {
-      -webkit-app-region: drag;
-      height: 38px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(26, 26, 28, 0.98);
-      flex-shrink: 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-      user-select: none;
-    }
-    #counter {
-      -webkit-app-region: no-drag;
-      color: rgba(255, 255, 255, 0.45);
-      font-size: 12px;
-      font-family: system-ui, -apple-system, sans-serif;
-      letter-spacing: 1px;
-    }
-
-    /* ── 图片区 ── */
+    /* ── 图片区：铺满全部 ── */
     #canvas {
-      flex: 1;
-      overflow: hidden;
+      width: 100%;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: grab;
-      background: #1c1c1e;
       position: relative;
+      background: transparent;
+      border-radius: 12px;
     }
     #canvas.dragging { cursor: grabbing; }
     #preview-img {
@@ -64,23 +44,51 @@
       display: block;
     }
 
-    /* ── 底部工具栏 ── */
-    #toolbar {
-      flex-shrink: 0;
+    /* ── 顶部悬浮栏 ── */
+    #toolbar-top {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 48px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
       display: flex;
       align-items: center;
-      gap: 4px;
-      background: rgba(26, 26, 28, 0.98);
-      padding: 6px 14px;
+      padding: 0 12px;
+      gap: 8px;
+      opacity: 0;
+      transition: opacity 0.22s ease;
+      border-radius: 12px 12px 0 0;
+      -webkit-app-region: drag;
+    }
+    #toolbar-top button { -webkit-app-region: no-drag; }
+
+    /* ── 底部悬浮栏 ── */
+    #toolbar-bottom {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 54px;
+      background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+      display: flex;
+      align-items: center;
       justify-content: center;
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 0 14px;
+      gap: 6px;
+      opacity: 0;
+      transition: opacity 0.22s ease;
+      border-radius: 0 0 12px 12px;
       -webkit-app-region: no-drag;
     }
-    #toolbar button {
-      background: none;
+
+    /* 显示状态 */
+    #app.show-ui #toolbar-top,
+    #app.show-ui #toolbar-bottom { opacity: 1; }
+
+    /* ── 按钮公共样式 ── */
+    .tbtn {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(6px);
       border: none;
-      color: rgba(255, 255, 255, 0.8);
-      font-size: 16px;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 15px;
       width: 30px;
       height: 30px;
       border-radius: 50%;
@@ -88,82 +96,336 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.12s, color 0.12s;
+      transition: background 0.12s;
       flex-shrink: 0;
     }
-    #toolbar button:hover { background: rgba(255, 255, 255, 0.14); }
-    #toolbar button:disabled { opacity: 0.22; cursor: default; }
-    #toolbar button:disabled:hover { background: none; }
-    #btn-prev, #btn-next { font-size: 18px; }
+    .tbtn:hover { background: rgba(255, 255, 255, 0.28); }
+    .tbtn:disabled { opacity: 0.25; cursor: default; }
+    .tbtn:disabled:hover { background: rgba(255, 255, 255, 0.15); }
+
+    #btn-close {
+      background: rgba(220, 60, 60, 0.5);
+      margin-left: auto;
+    }
+    #btn-close:hover { background: rgba(220, 60, 60, 0.8); }
+
+    #btn-minimize { background: rgba(255, 255, 255, 0.12); }
+
+    #btn-pin { background: rgba(255, 255, 255, 0.12); font-size: 13px; transition: background 0.15s, transform 0.2s; }
+    #btn-pin.pinned { background: rgba(255, 200, 50, 0.35); transform: rotate(-45deg); }
+
+    #btn-ocr {
+      background: rgba(255, 255, 255, 0.12);
+      font-size: 11px;
+      width: auto; padding: 0 10px;
+      border-radius: 12px;
+      letter-spacing: 0.3px;
+      transition: background 0.15s, border-color 0.15s;
+      border: 1px solid transparent;
+    }
+    #btn-ocr:hover { background: rgba(255,255,255,0.22); }
+    #btn-ocr.ocr-active {
+      background: rgba(120, 200, 255, 0.28);
+      border-color: rgba(120, 200, 255, 0.6);
+      color: rgba(200, 240, 255, 1);
+    }
+    #btn-ocr.ocr-loading { opacity: 0.6; cursor: default; }
+
+    /* ── OCR 透明文字覆盖层 ── */
+    #ocr-overlay {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform-origin: center center;
+      pointer-events: none;
+      display: none;
+    }
+    #ocr-overlay.visible { display: block; pointer-events: all; }
+
+    .ocr-word {
+      position: absolute;
+      color: transparent;
+      background: transparent;
+      cursor: crosshair;
+      user-select: none;
+      white-space: pre;
+      font-family: 'Microsoft YaHei', system-ui, sans-serif;
+      line-height: 1;
+      border-radius: 2px;
+      transition: background 0.12s;
+    }
+    .ocr-word:hover   { background: rgba(100, 160, 255, 0.14); }
+    .ocr-word.sel     { background: rgba(80, 140, 255, 0.38); }
+    .ocr-word.flash   { background: rgba(80, 140, 255, 0.55); transition: none; }
+    #ocr-sel-rect {
+      position: absolute;
+      border: 1.5px solid rgba(100, 170, 255, 0.9);
+      background: rgba(80, 140, 255, 0.08);
+      pointer-events: none;
+      display: none;
+      z-index: 20;
+    }
+    .ocr-copied-tip {
+      position: absolute;
+      background: rgba(30, 30, 60, 0.88);
+      color: rgba(180, 230, 255, 0.95);
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      pointer-events: none;
+      transform: translateY(-100%) translateY(-6px);
+      animation: ocr-tip-fade 1.2s ease forwards;
+      white-space: nowrap;
+      z-index: 30;
+    }
+    @keyframes ocr-tip-fade {
+      0%   { opacity: 1; }
+      60%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    #counter {
+      flex: 1;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 12px;
+      font-family: system-ui, sans-serif;
+      letter-spacing: 1px;
+      pointer-events: none;
+    }
+
     .sep {
       width: 1px;
-      height: 16px;
-      background: rgba(255, 255, 255, 0.1);
-      margin: 0 4px;
+      height: 14px;
+      background: rgba(255, 255, 255, 0.15);
+      margin: 0 2px;
       flex-shrink: 0;
     }
+
     #zoom-label {
-      color: rgba(255, 255, 255, 0.6);
-      font-size: 12px;
-      min-width: 40px;
+      color: rgba(255, 255, 255, 0.65);
+      font-size: 11px;
+      min-width: 36px;
       text-align: center;
       font-family: system-ui, sans-serif;
     }
-    #btn-copy.copied { color: #4caf82; }
+
+    #btn-copy.copied { color: #4caf82; background: rgba(76, 175, 130, 0.25); }
+    #btn-prev, #btn-next { font-size: 17px; }
   </style>
 </head>
 <body>
   <div id="app">
-    <div id="titlebar">
-      <span id="counter">1 / 1</span>
-    </div>
     <div id="canvas">
       <img id="preview-img" src="" alt="" draggable="false" />
+      <div id="ocr-overlay"><div id="ocr-sel-rect"></div></div>
     </div>
-    <div id="toolbar">
-      <button id="btn-prev" title="上一张（← 键）">‹</button>
-      <button id="btn-next" title="下一张（→ 键）">›</button>
+
+    <!-- 顶部：最小化 + 置顶 + 计数 + OCR + 关闭 -->
+    <div id="toolbar-top">
+      <button class="tbtn" id="btn-minimize" title="最小化">－</button>
+      <button class="tbtn" id="btn-pin" title="置顶">📌</button>
+      <span id="counter">1 / 1</span>
+      <button class="tbtn" id="btn-ocr" title="识别图中文字">T 识别</button>
+      <button class="tbtn" id="btn-close" title="关闭（Esc）">✕</button>
+    </div>
+
+    <!-- 底部：上一张 缩小 比例 放大 重置 复制 下一张 -->
+    <div id="toolbar-bottom">
+      <button class="tbtn" id="btn-prev" title="上一张（←）">‹</button>
       <div class="sep"></div>
-      <button id="btn-out" title="缩小（- 键）">－</button>
+      <button class="tbtn" id="btn-out"   title="缩小（-）">－</button>
       <span id="zoom-label">100%</span>
-      <button id="btn-in" title="放大（+ 键）">＋</button>
-      <button id="btn-reset" title="重置（0 键）">⊙</button>
+      <button class="tbtn" id="btn-in"    title="放大（+）">＋</button>
+      <button class="tbtn" id="btn-reset" title="重置（0）">⊙</button>
       <div class="sep"></div>
-      <button id="btn-copy" title="复制图片">⎘</button>
+      <button class="tbtn" id="btn-copy"  title="复制图片">⎘</button>
       <div class="sep"></div>
-      <button id="btn-close" title="关闭（Esc）">✕</button>
+      <button class="tbtn" id="btn-next" title="下一张（→）">›</button>
     </div>
   </div>
 
   <script>
-    const img     = document.getElementById('preview-img')
-    const counter = document.getElementById('counter')
-    const label   = document.getElementById('zoom-label')
-    const canvas  = document.getElementById('canvas')
-    const btnPrev = document.getElementById('btn-prev')
-    const btnNext = document.getElementById('btn-next')
-    const btnCopy = document.getElementById('btn-copy')
+    const app      = document.getElementById('app')
+    const img      = document.getElementById('preview-img')
+    const counter  = document.getElementById('counter')
+    const label    = document.getElementById('zoom-label')
+    const canvas   = document.getElementById('canvas')
+    const btnPrev  = document.getElementById('btn-prev')
+    const btnNext  = document.getElementById('btn-next')
+    const btnCopy  = document.getElementById('btn-copy')
 
-    let images = []
-    let currentIndex = 0
+    let images = [], currentIndex = 0
     let zoom = 1, px = 0, py = 0
     const STEP = 0.2
 
     function apply() {
       img.style.transform = `translate(${px}px, ${py}px) scale(${zoom})`
       label.textContent = Math.round(zoom * 100) + '%'
+      if (ocrActive) {
+        ocrOverlay.style.transform = `translate(${px}px, ${py}px) scale(${zoom})`
+      }
     }
 
     function zoomIn()  { zoom = Math.min(8, +(zoom + STEP).toFixed(1)); apply() }
     function zoomOut() { zoom = Math.max(0.1, +(zoom - STEP).toFixed(1)); apply() }
     function reset()   { zoom = 1; px = 0; py = 0; apply() }
 
+    // ── OCR 识别 ─────────────────────────────────────────
+    const btnOcr    = document.getElementById('btn-ocr')
+    const ocrOverlay = document.getElementById('ocr-overlay')
+    let ocrActive   = false
+    let ocrData     = null   // { imageWidth, imageHeight, lines }
+
+    btnOcr.onclick = async () => {
+      if (btnOcr.classList.contains('ocr-loading')) return
+      if (ocrActive) {
+        clearOcr(); return
+      }
+      if (!images[currentIndex]) return
+
+      btnOcr.classList.add('ocr-loading')
+      btnOcr.textContent = 'T 识别中…'
+      try {
+        ocrData = await window.previewAPI?.recognizeText(images[currentIndex])
+        if (ocrData) { ocrActive = true; canvas.style.cursor = 'crosshair'; renderOcr() }
+        else { btnOcr.textContent = 'T 识别' }
+      } catch (e) {
+        console.error('[OCR]', e)
+        btnOcr.textContent = 'T 失败'
+        setTimeout(() => { btnOcr.textContent = 'T 识别' }, 2000)
+      } finally {
+        btnOcr.classList.remove('ocr-loading')
+        if (ocrActive) {
+          btnOcr.classList.add('ocr-active')
+          btnOcr.textContent = 'T 关闭'
+        }
+      }
+    }
+
+    function clearOcr() {
+      ocrActive = false
+      ocrData = null
+      canvas.style.cursor = ''
+      // 保留 sel-rect，重建其余内容
+      ocrOverlay.innerHTML = '<div id="ocr-sel-rect"></div>'
+      ocrOverlay.classList.remove('visible')
+      btnOcr.classList.remove('ocr-active')
+      btnOcr.textContent = 'T 识别'
+    }
+
+    function renderOcr() {
+      if (!ocrData || !ocrActive) return
+      ocrOverlay.innerHTML = '<div id="ocr-sel-rect"></div>'
+
+      const dispW = img.offsetWidth
+      const dispH = img.offsetHeight
+      const sx = dispW / ocrData.imageWidth
+      const sy = dispH / ocrData.imageHeight
+
+      ocrOverlay.style.width      = dispW + 'px'
+      ocrOverlay.style.height     = dispH + 'px'
+      ocrOverlay.style.marginLeft = (-dispW / 2) + 'px'
+      ocrOverlay.style.marginTop  = (-dispH / 2) + 'px'
+      ocrOverlay.style.transform  = `translate(${px}px, ${py}px) scale(${zoom})`
+
+      for (const line of ocrData.lines) {
+        for (const word of line.words) {
+          const span = document.createElement('span')
+          span.className = 'ocr-word'
+          span.textContent = word.text
+          span.style.left     = (word.x * sx) + 'px'
+          span.style.top      = (word.y * sy) + 'px'
+          span.style.width    = (word.width  * sx) + 'px'
+          span.style.height   = (word.height * sy) + 'px'
+          span.style.fontSize = (word.height * sy * 0.88) + 'px'
+          ocrOverlay.appendChild(span)
+        }
+      }
+      ocrOverlay.classList.add('visible')
+      setupOcrDrag()
+    }
+
+    // ── OCR 矩形框选 ─────────────────────────────────────
+    function setupOcrDrag() {
+      const selRect = document.getElementById('ocr-sel-rect')
+      let dragging = false
+      let sx0 = 0, sy0 = 0
+
+      ocrOverlay.addEventListener('mousedown', e => {
+        if (e.button !== 0) return
+        e.preventDefault()
+        dragging = true
+        sx0 = e.offsetX
+        sy0 = e.offsetY
+        selRect.style.display = 'none'
+        ocrOverlay.querySelectorAll('.ocr-word.sel').forEach(el => el.classList.remove('sel'))
+
+        const onMove = ev => {
+          if (!dragging) return
+          const ex = ev.offsetX ?? (ev.clientX - ocrOverlay.getBoundingClientRect().left)
+          const ey = ev.offsetY ?? (ev.clientY - ocrOverlay.getBoundingClientRect().top)
+          const minX = Math.min(sx0, ex), minY = Math.min(sy0, ey)
+          const maxX = Math.max(sx0, ex), maxY = Math.max(sy0, ey)
+
+          selRect.style.left    = minX + 'px'
+          selRect.style.top     = minY + 'px'
+          selRect.style.width   = (maxX - minX) + 'px'
+          selRect.style.height  = (maxY - minY) + 'px'
+          selRect.style.display = (maxX - minX + maxY - minY > 4) ? 'block' : 'none'
+
+          ocrOverlay.querySelectorAll('.ocr-word').forEach(el => {
+            const l = parseFloat(el.style.left), t = parseFloat(el.style.top)
+            const r = l + el.offsetWidth,        b = t + el.offsetHeight
+            el.classList.toggle('sel', l < maxX && r > minX && t < maxY && b > minY)
+          })
+        }
+
+        const onUp = ev => {
+          window.removeEventListener('mousemove', onMove)
+          window.removeEventListener('mouseup', onUp)
+          selRect.style.display = 'none'
+          dragging = false
+
+          const selected = [...ocrOverlay.querySelectorAll('.ocr-word.sel')]
+          if (selected.length === 0) return
+
+          // 按阅读顺序（先 Y 后 X）排序再拼文本
+          selected.sort((a, b) => {
+            const dy = parseFloat(a.style.top) - parseFloat(b.style.top)
+            return Math.abs(dy) > parseFloat(a.style.height) * 0.5
+              ? dy
+              : parseFloat(a.style.left) - parseFloat(b.style.left)
+          })
+          const text = selected.map(s => s.textContent).join(' ')
+
+          navigator.clipboard.writeText(text).then(() => {
+            selected.forEach(s => {
+              s.classList.add('flash')
+              setTimeout(() => { s.classList.remove('flash'); s.classList.remove('sel') }, 600)
+            })
+            const tip = document.createElement('div')
+            tip.className = 'ocr-copied-tip'
+            tip.textContent = `✓ 已复制 ${selected.length} 词`
+            tip.style.left = selRect.style.left || selected[0].style.left
+            tip.style.top  = selRect.style.top  || selected[0].style.top
+            ocrOverlay.appendChild(tip)
+            tip.addEventListener('animationend', () => tip.remove())
+          })
+        }
+
+        window.addEventListener('mousemove', onMove)
+        window.addEventListener('mouseup', onUp)
+      })
+    }
+
+    // 切换图片时清除 OCR
     function showImage(index) {
       currentIndex = (index + images.length) % images.length
       img.src = images[currentIndex]
       counter.textContent = `${currentIndex + 1} / ${images.length}`
       btnPrev.disabled = images.length <= 1
       btnNext.disabled = images.length <= 1
+      clearOcr()
       reset()
     }
 
@@ -172,10 +434,38 @@
       showImage(currentIndex + delta)
     }
 
+    // ── UI 自动隐藏 ──────────────────────────────────────
+    let hideTimer = null
+
+    function showUI() {
+      app.classList.add('show-ui')
+      clearTimeout(hideTimer)
+      hideTimer = setTimeout(() => app.classList.remove('show-ui'), 2000)
+    }
+
+    app.addEventListener('mousemove', showUI)
+    app.addEventListener('mouseenter', showUI)
+    app.addEventListener('mouseleave', () => {
+      clearTimeout(hideTimer)
+      app.classList.remove('show-ui')
+    })
+
+    // ── 按钮事件 ─────────────────────────────────────────
     document.getElementById('btn-in').onclick    = zoomIn
     document.getElementById('btn-out').onclick   = zoomOut
     document.getElementById('btn-reset').onclick = reset
     document.getElementById('btn-close').onclick = () => window.previewAPI?.close()
+    document.getElementById('btn-minimize').onclick = () => window.previewAPI?.minimize()
+
+    // 置顶切换
+    const btnPin = document.getElementById('btn-pin')
+    let pinned = false
+    btnPin.onclick = () => {
+      pinned = !pinned
+      btnPin.classList.toggle('pinned', pinned)
+      btnPin.title = pinned ? '取消置顶' : '置顶'
+      window.previewAPI?.setAlwaysOnTop(pinned)
+    }
     btnPrev.onclick = () => navigate(-1)
     btnNext.onclick = () => navigate(1)
 
@@ -190,14 +480,15 @@
       }, 1200)
     }
 
-    // 拖拽平移图片
+    // ── 拖拽平移 ─────────────────────────────────────────
     canvas.addEventListener('mousedown', e => {
       if (e.button !== 0) return
+      if (ocrActive) return  // OCR 模式：禁用拖拽，让文字选择正常工作
       e.preventDefault()
       const sx = e.clientX - px, sy = e.clientY - py
       canvas.classList.add('dragging')
       const onMove = e => { px = e.clientX - sx; py = e.clientY - sy; apply() }
-      const onUp   = () => {
+      const onUp = () => {
         canvas.classList.remove('dragging')
         window.removeEventListener('mousemove', onMove)
         window.removeEventListener('mouseup', onUp)
@@ -206,22 +497,23 @@
       window.addEventListener('mouseup', onUp)
     })
 
-    // 滚轮缩放
+    // ── 滚轮缩放 ─────────────────────────────────────────
     canvas.addEventListener('wheel', e => {
       e.preventDefault()
       e.deltaY < 0 ? zoomIn() : zoomOut()
     }, { passive: false })
 
-    // 键盘快捷键
+    // ── 键盘快捷键 ────────────────────────────────────────
     document.addEventListener('keydown', e => {
-      if      (e.key === 'Escape')              window.previewAPI?.closeAll()
-      else if (e.key === '+' || e.key === '=')  zoomIn()
-      else if (e.key === '-')                   zoomOut()
-      else if (e.key === '0')                   reset()
-      else if (e.key === 'ArrowLeft')           navigate(-1)
-      else if (e.key === 'ArrowRight')          navigate(1)
+      if      (e.key === 'Escape')             window.previewAPI?.closeAll()
+      else if (e.key === '+' || e.key === '=') zoomIn()
+      else if (e.key === '-')                  zoomOut()
+      else if (e.key === '0')                  reset()
+      else if (e.key === 'ArrowLeft')          navigate(-1)
+      else if (e.key === 'ArrowRight')         navigate(1)
     })
 
+    // ── 初始化数据 ────────────────────────────────────────
     window.previewAPI?.onInitData(({ images: imgs, currentIndex: idx }) => {
       images = imgs || []
       showImage(idx || 0)

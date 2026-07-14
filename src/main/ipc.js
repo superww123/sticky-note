@@ -9,10 +9,19 @@ const {
   deleteCalendarMark,
   searchAllNotes,
   getDatesWithContent,
+  getTodosForDateRange,
   saveAlarm,
   deleteAlarm,
+  getAllPendingAlarms,
+  getTodayAlarms,
+  updateAlarmTime,
+  updateAlarmNote,
+  moveAlarm,
+  syncAlarmTodoText,
 } = require('./database/db')
 const { archiveDailyNote } = require('./word/archiver')
+const { writeConfig } = require('./config')
+const { recognizeImage } = require('./ocr/ocrService')
 const { migrateOnStartup } = require('./scheduler')
 const { createNoteWindow } = require('./windows/windowManager')
 const { openImagePreviewWindow, closeAllImagePreviewWindows } = require('./windows/imagePreviewWindow')
@@ -169,8 +178,8 @@ function setupIpc(mainWindow, ballWindow) {
 
   ipcMain.handle('archive:manual', async (event, date) => {
     try {
-      await archiveDailyNote(date)
-      return { ok: true }
+      const filePath = await archiveDailyNote(date)
+      return { ok: true, filePath }
     } catch (e) {
       console.error('[IPC] 归档失败:', e.message)
       throw new Error(e.message || '归档失败')
@@ -194,10 +203,11 @@ function setupIpc(mainWindow, ballWindow) {
   ipcMain.handle('window:toggle-pin', () => {
     state.isPinned = !state.isPinned
     if (state.isPinned) {
-      mainWindow.setAlwaysOnTop(true, 'floating')
+      mainWindow.setAlwaysOnTop(true, 'screen-saver')
     } else {
       mainWindow.setAlwaysOnTop(false)
     }
+    writeConfig({ isPinned: state.isPinned })
     return state.isPinned
   })
 
@@ -212,6 +222,18 @@ function setupIpc(mainWindow, ballWindow) {
   ipcMain.handle('alarm:delete', (event, todoId) => {
     return deleteAlarm(todoId)
   })
+
+  ipcMain.handle('alarm:get-all-pending', () => getAllPendingAlarms())
+
+  ipcMain.handle('alarm:get-today', () => getTodayAlarms())
+
+  ipcMain.handle('alarm:update-time', (event, todoId, newTime) => updateAlarmTime(todoId, newTime))
+
+  ipcMain.handle('alarm:update-note', (event, todoId, newNote) => updateAlarmNote(todoId, newNote))
+
+  ipcMain.handle('alarm:move', (event, fromTodoId, toTodoId, toTodoText) => moveAlarm(fromTodoId, toTodoId, toTodoText))
+
+  ipcMain.handle('alarm:sync-text', (event, todoId, newText) => syncAlarmTodoText(todoId, newText))
 
   ipcMain.on('alarm:dismiss', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
@@ -228,6 +250,10 @@ function setupIpc(mainWindow, ballWindow) {
     return getDatesWithContent(dates)
   })
 
+  ipcMain.handle('data:todos-range', (event, { from, to }) => {
+    return getTodosForDateRange(from, to)
+  })
+
   // ─── 图片全屏预览 ─────────────────────────────────────
 
   ipcMain.on('image:preview-fullscreen', (event, src) => {
@@ -239,8 +265,26 @@ function setupIpc(mainWindow, ballWindow) {
     if (win && !win.isDestroyed()) win.close()
   })
 
+  ipcMain.on('preview:minimize', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win && !win.isDestroyed()) win.minimize()
+  })
+
+  ipcMain.on('preview:set-always-on-top', (event, flag) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win && !win.isDestroyed()) {
+      win.setAlwaysOnTop(flag, flag ? 'screen-saver' : 'normal')
+    }
+  })
+
   ipcMain.on('preview:close-all', () => {
     closeAllImagePreviewWindows()
+  })
+
+  // ─── 图片 OCR 识别 ────────────────────────────────────────
+
+  ipcMain.handle('ocr:recognize', async (event, src) => {
+    return recognizeImage(src)
   })
 
   // ─── 剪贴板 ───────────────────────────────────────────
@@ -249,6 +293,10 @@ function setupIpc(mainWindow, ballWindow) {
 
   ipcMain.on('shell:open-external', (event, url) => {
     shell.openExternal(url)
+  })
+
+  ipcMain.handle('shell:open-file', (event, filePath) => {
+    return shell.openPath(filePath)
   })
 
   ipcMain.handle('clipboard:write-image', (event, src) => {

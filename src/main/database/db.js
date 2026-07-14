@@ -83,6 +83,14 @@ async function initDatabase() {
     )
   `)
 
+  // 已删除待办的 originalId 记录表（防止迁移时重新出现）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS deleted_todos (
+      original_id TEXT PRIMARY KEY,
+      deleted_at TEXT NOT NULL
+    )
+  `)
+
   persist()
   console.log('[DB] 数据库初始化完成:', dbPath)
   return db
@@ -144,6 +152,23 @@ function getDailyNote(date) {
 
 function saveTodos(date, todos) {
   console.log(`[DB] saveTodos: date="${date}" len=${date?.length}, count=${todos?.length}`)
+
+  // 检测被删除的待办，记录其 originalId 防止迁移时重新出现
+  const existing = getDailyNote(date)
+  if (existing && existing.todos.length > 0) {
+    const newOrigIds = new Set(todos.map(t => String(t.originalId || t.id)))
+    const now = new Date().toISOString()
+    for (const t of existing.todos) {
+      const origId = String(t.originalId || t.id)
+      if (!newOrigIds.has(origId)) {
+        getDb().run(
+          `INSERT OR REPLACE INTO deleted_todos (original_id, deleted_at) VALUES (?, ?)`,
+          [origId, now]
+        )
+      }
+    }
+  }
+
   const now = new Date().toISOString()
   run(
     `INSERT INTO daily_notes (date, todos, note_content, created_at, updated_at)
@@ -326,6 +351,77 @@ function deleteAlarm(todoId) {
   run('DELETE FROM alarms WHERE todo_id = ?', [String(todoId)])
 }
 
+function getAllPendingAlarms() {
+  return queryAll(
+    `SELECT * FROM alarms WHERE triggered = 0 ORDER BY alarm_time ASC`
+  )
+}
+
+function getTodayAlarms() {
+  return queryAll(
+    `SELECT * FROM alarms
+     WHERE triggered = 0
+       AND date(alarm_time) = date('now', 'localtime')
+     ORDER BY alarm_time ASC`
+  )
+}
+
+function updateAlarmTime(todoId, newAlarmTime) {
+  run('UPDATE alarms SET alarm_time = ? WHERE todo_id = ? AND triggered = 0', [newAlarmTime, String(todoId)])
+}
+
+function updateAlarmNote(todoId, newNote) {
+  run('UPDATE alarms SET note = ? WHERE todo_id = ? AND triggered = 0', [newNote, String(todoId)])
+}
+
+function moveAlarm(fromTodoId, toTodoId, toTodoText) {
+  run(
+    'UPDATE alarms SET todo_id = ?, todo_text = ? WHERE todo_id = ? AND triggered = 0',
+    [String(toTodoId), toTodoText, String(fromTodoId)]
+  )
+}
+
+function syncAlarmTodoText(todoId, newText) {
+  run('UPDATE alarms SET todo_text = ? WHERE todo_id = ? AND triggered = 0', [newText, String(todoId)])
+}
+
+/**
+ * 获取所有已被用户手动删除的待办 originalId 集合
+ */
+function getDeletedOriginalIds() {
+  const rows = queryAll('SELECT original_id FROM deleted_todos')
+  return new Set(rows.map(r => r.original_id))
+}
+
+/**
+ * 获取所有有随心记内容的日期，按日期升序
+ */
+/**
+ * 查询日期范围内每天的待办列表
+ * @param {string} from  'YYYY-MM-DD'
+ * @param {string} to    'YYYY-MM-DD'
+ * @returns {{ date: string, todos: any[] }[]}  按日期升序，只含有待办的天
+ */
+function getTodosForDateRange(from, to) {
+  const rows = queryAll(
+    `SELECT date, todos FROM daily_notes
+     WHERE date >= ? AND date <= ?
+       AND todos != '[]' AND todos != ''
+     ORDER BY date ASC`,
+    [from, to]
+  )
+  return rows.map(r => ({ date: r.date, todos: JSON.parse(r.todos) }))
+}
+
+
+function getAllArchivedDates() {
+  return queryAll(
+    `SELECT date FROM daily_notes
+     WHERE note_content != '{}' AND note_content != ''
+     ORDER BY date ASC`
+  ).map(r => r.date)
+}
+
 module.exports = {
   initDatabase,
   getDb,
@@ -337,8 +433,17 @@ module.exports = {
   deleteCalendarMark,
   searchAllNotes,
   getDatesWithContent,
+  getTodosForDateRange,
   saveAlarm,
   getPendingAlarms,
   markAlarmTriggered,
   deleteAlarm,
+  getAllPendingAlarms,
+  getTodayAlarms,
+  updateAlarmTime,
+  updateAlarmNote,
+  moveAlarm,
+  syncAlarmTodoText,
+  getDeletedOriginalIds,
+  getAllArchivedDates,
 }

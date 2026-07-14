@@ -1,15 +1,14 @@
 const { Document, Packer, Paragraph, TextRun, ImageRun, HeadingLevel } = require('docx')
-const { dialog, BrowserWindow } = require('electron')
+const { dialog, BrowserWindow, shell } = require('electron')
 const fs = require('fs')
 const path = require('path')
-const { getDailyNote } = require('../database/db')
+const { getDailyNote, getAllArchivedDates } = require('../database/db')
 const { getArchiveDir: getConfiguredDir, setArchiveDir } = require('../config')
 
 async function resolveArchiveDir() {
   const saved = getConfiguredDir()
   if (saved) return saved
 
-  // 首次使用：弹出文件夹选择框
   const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0] || null
   const result = await dialog.showOpenDialog(win, {
     title: '选择随心记归档文件夹',
@@ -29,12 +28,9 @@ function getArchiveFile(archiveDir) {
   return path.join(archiveDir, '随心记归档.docx')
 }
 
-function getHistoryFile(archiveDir) {
-  return path.join(archiveDir, '.archive-history.json')
-}
-
 /**
- * 将指定日期的随心记归档到 Word 文档
+ * 归档指定日期的随心记
+ * 逻辑：从数据库读取所有有内容的日期，重新生成整个 docx（当天内容已是最新）
  */
 async function archiveDailyNote(date) {
   const data = getDailyNote(date)
@@ -46,37 +42,27 @@ async function archiveDailyNote(date) {
   const archiveDir = await resolveArchiveDir()
   fs.mkdirSync(archiveDir, { recursive: true })
 
-  const paragraphs = await tiptapToDocxParagraphs(date, data.noteContent)
-  let existingChildren = []
-  if (fs.existsSync(getArchiveFile(archiveDir))) {
-    existingChildren = loadArchivedHistory(archiveDir)
-  }
+  // 从数据库读所有有内容的日期（包含今天最新数据）
+  const allDates = getAllArchivedDates()
+  if (!allDates.includes(date)) allDates.push(date)
+  allDates.sort()
 
-  const historyEntry = { date, content: data.noteContent }
-  saveArchivedHistory(historyEntry, existingChildren, archiveDir)
-  await generateDocx(existingChildren.concat([historyEntry]), archiveDir)
-  console.log(`[Archiver] ${date} 随心记归档完成 → ${archiveDir}`)
+  await generateDocx(allDates, archiveDir)
+  const filePath = getArchiveFile(archiveDir)
+  console.log(`[Archiver] ${date} 随心记归档完成 → ${filePath}`)
+  return filePath
 }
 
-function loadArchivedHistory(archiveDir) {
-  const historyFile = getHistoryFile(archiveDir)
-  if (!fs.existsSync(historyFile)) return []
-  try { return JSON.parse(fs.readFileSync(historyFile, 'utf-8')) } catch { return [] }
-}
-
-function saveArchivedHistory(newEntry, existing, archiveDir) {
-  const historyFile = getHistoryFile(archiveDir)
-  fs.writeFileSync(historyFile, JSON.stringify([...existing, newEntry], null, 2), 'utf-8')
-}
-
-async function generateDocx(historyEntries, archiveDir) {
+async function generateDocx(dates, archiveDir) {
   const allSections = []
 
-  for (const entry of historyEntries) {
-    const paragraphs = await tiptapToDocxParagraphs(entry.date, entry.content)
+  for (const date of dates) {
+    const data = getDailyNote(date)
+    if (!data?.noteContent?.content) continue
+    const paragraphs = await tiptapToDocxParagraphs(date, data.noteContent)
     allSections.push(
       new Paragraph({
-        text: `${entry.date} 随心记`,
+        text: `${date} 随心记`,
         heading: HeadingLevel.HEADING_2,
         spacing: { before: 400, after: 200 },
       }),
@@ -96,32 +82,63 @@ async function generateDocx(historyEntries, archiveDir) {
   })
 
   const buffer = await Packer.toBuffer(doc)
-  fs.writeFileSync(getArchiveFile(archiveDir), buffer)
+  try {
+    fs.writeFileSync(getArchiveFile(archiveDir), buffer)
+  } catch (e) {
+    if (e.code === 'EBUSY' || e.code === 'EPERM') {
+      throw new Error('请先关闭 Word 中已打开的归档文件，再重试归档')
+    }
+    throw e
+  }
 }
 
 async function tiptapToDocxParagraphs(date, tiptapJson) {
   const paragraphs = []
   if (!tiptapJson || !tiptapJson.content) return paragraphs
 
-  for (const node of tiptapJson.content) {
+  async function processNode(node, listLevel = 0) {
     if (node.type === 'paragraph') {
-      paragraphs.push(new Paragraph({ children: nodeToTextRuns(node) }))
+      const runs = nodeToTextRuns(node)
+      const opts = runs.length ? { children: runs } : { text: '' }
+      if (listLevel > 0) opts.bullet = { level: listLevel - 1 }
+      paragraphs.push(new Paragraph(opts))
+
+    } else if (node.type === 'orderedList' || node.type === 'bulletList') {
+      for (const item of (node.content || [])) {
+        await processNode(item, listLevel + 1)
+      }
+
+    } else if (node.type === 'listItem') {
+      // listItem 可以包含多个 paragraph 和嵌套列表，全部递归处理
+      for (const child of (node.content || [])) {
+        await processNode(child, listLevel)
+      }
+
     } else if (node.type === 'image') {
       try {
-        const imgParagraph = await imageNodeToDocx(node)
-        if (imgParagraph) paragraphs.push(imgParagraph)
+        const imgPara = await imageNodeToDocx(node)
+        if (imgPara) paragraphs.push(imgPara)
       } catch (e) {
         console.error('[Archiver] 图片处理失败:', e.message)
         paragraphs.push(new Paragraph({ text: '[图片]' }))
       }
-    } else if (node.type === 'bulletList' || node.type === 'orderedList') {
-      for (const item of (node.content || [])) {
-        const runs = nodeToTextRuns(item.content?.[0] || {})
-        paragraphs.push(new Paragraph({ children: runs, bullet: { level: 0 } }))
+
+    } else if (node.type === 'horizontalRule') {
+      paragraphs.push(new Paragraph({
+        children: [new TextRun({ text: '─'.repeat(30), color: 'AAAAAA' })],
+      }))
+
+    } else if (node.content) {
+      // 未知容器节点，递归子节点
+      for (const child of node.content) {
+        await processNode(child, listLevel)
       }
     }
   }
 
+  for (const node of tiptapJson.content) {
+    await processNode(node)
+  }
   return paragraphs
 }
 
@@ -137,10 +154,12 @@ function nodeToTextRuns(node) {
       const colorMark = marks.find(m => m.type === 'textStyle')
       const hlMark    = marks.find(m => m.type === 'highlight')
       const sizeMark  = marks.find(m => m.type === 'textStyle')
-      const color     = colorMark?.attrs?.color?.replace('#', '') || undefined
-      const highlight = hlMark?.attrs?.color?.replace('#', '') || undefined
+      const rawColor  = colorMark?.attrs?.color
+      const rawHL     = hlMark?.attrs?.color
+      const color     = rawColor && rawColor.startsWith('#') ? rawColor.replace('#', '') : undefined
+      const highlight = rawHL    && !rawHL.startsWith('var(')    ? 'yellow'                  : undefined
       const fontSize  = sizeMark?.attrs?.fontSize
-        ? parseInt(sizeMark.attrs.fontSize) * 2  // docx 单位是半点，px*2 近似
+        ? parseInt(sizeMark.attrs.fontSize) * 2
         : undefined
 
       runs.push(new TextRun({

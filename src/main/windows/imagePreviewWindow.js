@@ -34,8 +34,8 @@ function openImagePreviewWindow(data) {
     minHeight: 260,
     frame: false,
     transparent: true,
-    alwaysOnTop: true,
-    skipTaskbar: true,
+    alwaysOnTop: false,
+    skipTaskbar: false,
     resizable: true,
     movable: true,
     focusable: true,
@@ -46,7 +46,6 @@ function openImagePreviewWindow(data) {
     },
   })
 
-  win.setAlwaysOnTop(true, 'screen-saver')
   win.loadFile(path.join(__dirname, '../../../assets/imagePreview.html'))
 
   win.webContents.once('did-finish-load', () => {
