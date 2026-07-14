@@ -38,6 +38,7 @@
   "build": {
     "appId": "com.wenya.sticky-note",
     "productName": "随心记",
+    "afterSign": "scripts/afterSign.js",
     "directories": {
       "output": "release"
     },
