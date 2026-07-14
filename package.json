@@ -52,11 +52,13 @@
       "node_modules/sql.js/dist/*.wasm"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "artifactName": "sticky-note-setup-${version}.exe"
     },
     "mac": {
       "target": "dmg",
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "artifactName": "sticky-note-${version}.dmg"
     },
     "nsis": {
       "oneClick": false,
