@@ -27,16 +27,16 @@ if (!gotTheLock) {
 }
 
 // 控制失焦自动变小球的保护期（启动/唤出后短暂禁用，避免窗口刚出现就消失）
-let autoHideEnabled = false
+// autoHideEnabled 已移入 state 模块，供 trayManager 等模块共享
 
 function enableAutoHide() {
-  autoHideEnabled = true
+  state.autoHideEnabled = true
 }
 
 // 第二次启动时（双击图标/快捷键）：把已有窗口从小球/托盘状态唤出
 app.on('second-instance', () => {
   if (!mainWindow || mainWindow.isDestroyed()) return
-  autoHideEnabled = false
+  state.autoHideEnabled = false
   if (ballWindow && !ballWindow.isDestroyed() && ballWindow.isVisible()) {
     ballWindow.hide()
   }
@@ -81,7 +81,7 @@ app.whenReady().then(async () => {
   if (startInBallMode) {
     mainWindow.hide()
     ballWindow.show()
-    autoHideEnabled = true  // 小球模式本来就隐藏，直接允许失焦
+    state.autoHideEnabled = true  // 小球模式本来就隐藏，直接允许失焦
   } else {
     // 正常启动：给窗口 1.5s 保护期，防止启动瞬间失焦导致窗口消失
     mainWindow.focus()
@@ -114,12 +114,12 @@ app.whenReady().then(async () => {
   // 失焦自动变小球：焦点转到 app 外部时隐藏主窗口、显示小球
   // 钉住模式或焦点在 app 内部窗口间切换时不触发
   mainWindow.on('blur', () => {
-    if (!autoHideEnabled) return  // 启动/唤出保护期内不触发
+    if (!state.autoHideEnabled) return  // 启动/唤出保护期内不触发
     if (state.isPinned) return  // 钉住时始终保持可见
     if (mainWindow.isDestroyed() || !mainWindow.isVisible()) return
     // 延迟 200ms 再判断：datetime-local 等 native 控件会短暂抢走焦点再还回来
     setTimeout(() => {
-      if (!autoHideEnabled || state.isPinned) return
+      if (!state.autoHideEnabled || state.isPinned) return
       if (mainWindow.isDestroyed() || !mainWindow.isVisible()) return
       if (mainWindow.isFocused()) return  // 窗口已重新获焦，不隐藏
       const focused = BrowserWindow.getFocusedWindow()

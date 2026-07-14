@@ -1,5 +1,18 @@
 const { Tray, Menu, nativeImage, app } = require('electron')
 const path = require('path')
+const state = require('../state')
+
+function showMainWindow(mainWindow, ballWindow) {
+  state.autoHideEnabled = false
+  ballWindow.hide()
+  mainWindow.show()
+  if (state.isPinned) {
+    mainWindow.setAlwaysOnTop(true, 'screen-saver')
+  }
+  mainWindow.moveTop()
+  mainWindow.focus()
+  setTimeout(() => { state.autoHideEnabled = true }, 1500)
+}
 
 /**
  * 创建系统托盘
@@ -28,13 +41,7 @@ function setupTray(mainWindow, ballWindow) {
   const contextMenu = Menu.buildFromTemplate([
     {
       label: '📝 显示便签',
-      click: () => {
-        ballWindow.hide()
-        mainWindow.show()
-        mainWindow.setAlwaysOnTop(true, 'floating')
-        mainWindow.moveTop()
-        mainWindow.focus()
-      },
+      click: () => showMainWindow(mainWindow, ballWindow),
     },
     {
       label: '⚽ 收起为小球',
@@ -55,22 +62,8 @@ function setupTray(mainWindow, ballWindow) {
 
   tray.setContextMenu(contextMenu)
 
-  // 单击托盘图标显示主窗口
-  tray.on('click', () => {
-    ballWindow.hide()
-    mainWindow.show()
-    mainWindow.setAlwaysOnTop(true, 'floating')
-    mainWindow.moveTop()
-    mainWindow.focus()
-  })
-
-  tray.on('double-click', () => {
-    ballWindow.hide()
-    mainWindow.show()
-    mainWindow.setAlwaysOnTop(true, 'floating')
-    mainWindow.moveTop()
-    mainWindow.focus()
-  })
+  tray.on('click', () => showMainWindow(mainWindow, ballWindow))
+  tray.on('double-click', () => showMainWindow(mainWindow, ballWindow))
 
   return tray
 }
