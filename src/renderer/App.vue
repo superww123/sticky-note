@@ -181,6 +181,7 @@ onMounted(async () => {
       return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
     }
     const checkDayChange = () => {
+      if (store.isManualDate) return  // 用户手动切换到历史日期，不自动跳回今天
       if (store.currentDate !== getTodayStr()) store.loadToday()
     }
     dayCheckTimer = setInterval(checkDayChange, 60_000)

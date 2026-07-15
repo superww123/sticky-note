@@ -14,6 +14,7 @@ export const useDailyStore = defineStore('daily', () => {
   const todos = ref([])
   const noteContent = ref({ type: 'doc', content: [] })
   const isLoading = ref(false)
+  const isManualDate = ref(false)  // 用户手动切换到非今天的日期时为 true
   let loadSeq = 0   // 防止并发 loadDate 用旧数据覆盖新数据
 
   // 未完成待办数量
@@ -32,6 +33,7 @@ export const useDailyStore = defineStore('daily', () => {
     const seq = ++loadSeq
     isLoading.value = true
     currentDate.value = date
+    isManualDate.value = (date !== getTodayStr())  // 非今天则标记为手动选择
     try {
       const data = await window.electronAPI?.getDailyData(date)
       if (seq !== loadSeq) return   // 已被更新的加载请求覆盖，丢弃旧结果
@@ -53,6 +55,7 @@ export const useDailyStore = defineStore('daily', () => {
    * 加载今天的数据（先触发一次迁移，确保昨天未完成的待办已补入）
    */
   async function loadToday() {
+    isManualDate.value = false  // 回到今天，解除手动锁定
     await window.electronAPI?.migrateNow?.()
     await loadDate(getTodayStr())
   }
@@ -167,6 +170,7 @@ export const useDailyStore = defineStore('daily', () => {
     todos,
     noteContent,
     isLoading,
+    isManualDate,
     pendingCount,
     overdueTodos,
     loadDate,
