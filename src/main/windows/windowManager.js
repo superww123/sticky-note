@@ -167,26 +167,44 @@ function createNoteWindow(date, colorIdx = 1) {
 module.exports = { createMainWindow, createBallWindow, createNoteWindow }
 
 /**
- * 为窗口绑定拼写检查右键菜单（仅当右键点击拼错的单词时弹出）
+ * 为窗口绑定右键菜单：复制/粘贴/全选 + 拼写检查建议
  */
 function setupSpellCheckContextMenu(win) {
   win.webContents.on('context-menu', (event, params) => {
-    if (!params.misspelledWord) return
+    const items = []
 
-    const menu = new Menu()
-    for (const suggestion of params.dictionarySuggestions) {
-      menu.append(new MenuItem({
-        label: suggestion,
-        click: () => win.webContents.replaceMisspelling(suggestion),
+    // 拼写检查建议（优先显示在顶部）
+    if (params.misspelledWord) {
+      for (const suggestion of params.dictionarySuggestions) {
+        items.push(new MenuItem({
+          label: suggestion,
+          click: () => win.webContents.replaceMisspelling(suggestion),
+        }))
+      }
+      if (params.dictionarySuggestions.length > 0) {
+        items.push(new MenuItem({ type: 'separator' }))
+      }
+      items.push(new MenuItem({
+        label: '添加到词典',
+        click: () => win.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord),
       }))
+      items.push(new MenuItem({ type: 'separator' }))
     }
-    if (params.dictionarySuggestions.length > 0) {
-      menu.append(new MenuItem({ type: 'separator' }))
+
+    // 复制/粘贴/全选
+    if (params.selectionText) {
+      items.push(new MenuItem({ label: '复制', role: 'copy' }))
     }
-    menu.append(new MenuItem({
-      label: '添加到词典',
-      click: () => win.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord),
-    }))
-    menu.popup()
+    if (params.isEditable) {
+      if (params.selectionText) items.push(new MenuItem({ type: 'separator' }))
+      items.push(new MenuItem({ label: '粘贴', role: 'paste' }))
+      items.push(new MenuItem({ label: '全选', role: 'selectAll' }))
+    }
+
+    if (items.length) {
+      const menu = new Menu()
+      items.forEach(i => menu.append(i))
+      menu.popup({ window: win })
+    }
   })
 }

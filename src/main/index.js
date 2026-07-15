@@ -97,20 +97,6 @@ app.whenReady().then(async () => {
   // 注册 IPC 通信
   setupIpc(mainWindow, ballWindow)
 
-  // 右键菜单：选中文字时显示「复制」，可编辑区域额外显示「粘贴/全选」
-  mainWindow.webContents.on('context-menu', (event, params) => {
-    const items = []
-    if (params.selectionText) {
-      items.push({ label: '复制', role: 'copy' })
-    }
-    if (params.isEditable) {
-      if (items.length) items.push({ type: 'separator' })
-      items.push({ label: '粘贴', role: 'paste' })
-      items.push({ label: '全选', role: 'selectAll' })
-    }
-    if (items.length) Menu.buildFromTemplate(items).popup({ window: mainWindow })
-  })
-
   // 失焦自动变小球：焦点转到 app 外部时隐藏主窗口、显示小球
   // 钉住模式或焦点在 app 内部窗口间切换时不触发
   mainWindow.on('blur', () => {
