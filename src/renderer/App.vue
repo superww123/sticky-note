@@ -36,6 +36,13 @@
           :title="isPinned ? '取消固定（点击后失焦会变小球）' : '固定在最上层（可同时查看其他窗口）'"
           @click="togglePin"
         >↑</button>
+        <button
+          v-if="isNoteWindow"
+          class="ctrl-btn pin-btn"
+          :class="{ pinned: isPinned }"
+          :title="isPinned ? '取消固定' : '固定在最上层'"
+          @click="toggleNotePin"
+        >↑</button>
         <button v-if="!isNoteWindow" class="ctrl-btn tray-btn" title="最小化到托盘" @click="minimizeToTray">－</button>
         <button v-if="!isNoteWindow" class="ctrl-btn ball-btn" title="收起为小球"   @click="minimizeToBall">●</button>
         <button v-if="isNoteWindow"  class="ctrl-btn tray-btn" title="最小化到任务栏" @click="minimizeToTray">－</button>
@@ -77,6 +84,11 @@ const store = useDailyStore()
 const isNoteWindow = computed(() => route.path.startsWith('/note/'))
 const isPinned = ref(false)
 const contentRef = ref(null)
+
+async function toggleNotePin() {
+  isPinned.value = !isPinned.value
+  window.electronAPI?.setWindowAlwaysOnTop(isPinned.value)
+}
 
 // ── 搜索 ──────────────────────────────────────────────────
 const showSearch = ref(false)

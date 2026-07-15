@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ─── 图钉置顶 ─────────────────────────────────────────
   togglePin: () => ipcRenderer.invoke('window:toggle-pin'),
   getPinState: () => ipcRenderer.invoke('window:get-pin'),
+  setWindowAlwaysOnTop: (flag) => ipcRenderer.send('preview:set-always-on-top', flag),
 
   // ─── 图片全屏预览 ─────────────────────────────────────
   previewImageFullscreen: (src) => ipcRenderer.send('image:preview-fullscreen', src),
